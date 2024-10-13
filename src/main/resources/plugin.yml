@@ -1,0 +1,103 @@
+name: HeroCraft
+version: '${project.version}'
+main: de.christoph.herocraft.HeroCraft
+api-version: '1.20'
+
+commands:
+  birthday:
+  changechallenge:
+  coins:
+    aliases:
+      - coin
+      - befehle
+      - economy
+      - money
+  befehle:
+    aliases:
+      - commands
+      - hilfe
+      - help
+  spawn:
+  chatclear:
+    aliases:
+      - clearchat
+      - cc
+  enderchest:
+    aliases:
+      - ec
+      - endertruhe
+  gamemode:
+    aliases:
+      - gm
+  hut:
+    aliases:
+      - hat
+  inventar:
+    aliases:
+      - inventory
+      - inv
+      - invsee
+  verzaubern:
+    aliases:
+      - enchantment
+  umbennenen:
+    aliases:
+      - rename
+  signieren:
+    aliases:
+      - sign
+  tpa:
+    aliases:
+      - teleportanfrage
+  vanish:
+    aliases:
+      - v
+  sprung:
+  adminafk:
+  #dimensions:
+  home:
+  ruestungsschmied:
+  schlachter:
+  rtp:
+  teleporter:
+    aliases:
+      - warps
+      - warp
+      - tpter
+      - teleportieren
+      - navigator
+      - navigation
+  fischer:
+  bergarbeiter:
+  setcasewinnings:
+  trust:
+  untrust:
+  createlandfast:
+  setpresentationholo:
+  landvote:
+  holzfaeller:
+  auktionshaus:
+  createland:
+    aliases:
+      - landerstellen
+      - neuesland
+  land:
+  landshop:
+  moebelhaus:
+  landeinladungannehmen:
+  landeinladungablehnen:
+  dekorationsshop:
+  tutorialnpc:
+  tutorialnein:
+  starttutorial:
+  markttutorial:
+  marktnein:
+  startmehrinfos:
+  forschungsergebnis:
+  rezepte:
+  versicherungen:
+  startvoteday:
+  tagja:
+  tagnein:
+  mentor:
+  status:
