@@ -4,6 +4,8 @@ import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.utils.Constant;
 import dev.lone.itemsadder.api.CustomStack;
 import dev.lone.itemsadder.api.ItemsAdder;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -11,6 +13,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Random;
 
@@ -46,7 +49,7 @@ public class FastLandCreationCommand implements CommandExecutor {
                 if(Bukkit.getWorld("world").getBlockAt(new Location(Bukkit.getWorld("world"), x, y, z)).isLiquid()) {
                     continue;
                 }
-                Land land = new Land(
+                /*Land land = new Land(
                         name,
                         player.getUniqueId().toString(),
                         player.getName(),
@@ -66,16 +69,24 @@ public class FastLandCreationCommand implements CommandExecutor {
                         new String[]{""}
                 );
                 HeroCraft.getPlugin().getLandManager().getAllLands().add(land);
-                HeroCraft.getPlugin().getLandManager().saveLand(land);
-                player.sendMessage(Constant.PREFIX + "§7Sehr gut, du besitzt nun dein eigenes Land!");
-                ItemStack goverment = null;
+                HeroCraft.getPlugin().getLandManager().saveLand(land);*/
+
+                player.sendMessage(Constant.PREFIX + "§a§lPlatziere nun das Regierungsgebäude!");
+                player.sendMessage("§7Nicht zufrieden mit dem Ort?");
+                TextComponent textComponent = new TextComponent("§a§l(RandomTP)");
+                textComponent.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/rtp 1288"));
+                player.spigot().sendMessage(textComponent);
+                player.sendTitle("§e§lRegierungsgebäude platzieren!", "§7Um das Land zu erstellen");
+                ItemStack goverment3 = null;
                 for(CustomStack i : ItemsAdder.getAllItems()) {
                     if(i.getDisplayName().equalsIgnoreCase("§4§lRegierungsgebäude")) {
-                        goverment = i.getItemStack();
+                        goverment3 = i.getItemStack();
                     }
                 }
-                player.sendMessage(Constant.PREFIX + "§7Platziere nun das Regierungsgebäude auf deinem Land. §4Wenn du es verlierst, musst du dir mit /regierungsshop ein neues kaufen.");
-                player.getInventory().addItem(goverment);
+                ItemMeta itemMeta = goverment3.getItemMeta();
+                itemMeta.setDisplayName("§4§lLand erstellen §0(Item platzieren)");
+                goverment3.setItemMeta(itemMeta);
+                player.getInventory().addItem(goverment3);
                 Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
                     @Override
                     public void run() {

@@ -1,6 +1,7 @@
 package de.christoph.herocraft.school.skills.passiveskills;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.protection.ProtectionListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -18,11 +19,11 @@ import org.bukkit.potion.PotionEffectType;
 public class Strongness extends PassiveSkill implements Listener {
 
     public Strongness() {
-        super("§4§lStärke", "Werde Stärker", 30, PotionEffectType.INCREASE_DAMAGE, new Location(Bukkit.getWorld("hero"), -704, 67, -264, 178.3F, 0.4F), "§7Trainiere mit den Boxssäcken", 200);
+        super("§4§lStärke", "Werde Stärker", 30, PotionEffectType.STRENGTH, new Location(Bukkit.getWorld("world"), 66, 77, -132), "§7Trainiere mit den Boxssäcken", 200);
         Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
             @Override
             public void run() {
-                trainingLocation = new Location(Bukkit.getWorld("hero"), -704, 67, -264, 178.3F, 0.4F);
+                trainingLocation = new Location(Bukkit.getWorld("world"), 66, 77, -132);
             }
         }, 20*2);
     }
@@ -56,7 +57,8 @@ public class Strongness extends PassiveSkill implements Listener {
             return;
         if(block.getType() != Material.RED_CONCRETE)
             return;
-        leaveTraining(event.getPlayer());
+        if(ProtectionListener.isInDangerZone(block.getLocation()))
+            leaveTraining(event.getPlayer());
     }
 
 
@@ -71,7 +73,7 @@ public class Strongness extends PassiveSkill implements Listener {
             return;
         if(!trainingPlayers.containsKey(player))
             return;
-        if(block.getLocation().getX() == -705 && block.getLocation().getZ() == -268) {
+        if(block.getLocation().getX() == 66 && block.getLocation().getZ() == -131) {
             makeTrainingProgress(player);
         }
     }

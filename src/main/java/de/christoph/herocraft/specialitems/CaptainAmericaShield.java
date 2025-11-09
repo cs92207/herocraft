@@ -1,6 +1,10 @@
 package de.christoph.herocraft.specialitems;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.lands.Land;
+import de.christoph.herocraft.lands.LandManager;
+import de.christoph.herocraft.lands.province.Province;
+import de.christoph.herocraft.lands.province.ProvinceManager;
 import de.christoph.herocraft.utils.ItemBuilder;
 import de.christoph.herocraft.protection.ProtectionListener;
 //import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
@@ -34,6 +38,17 @@ public class CaptainAmericaShield implements Listener {
             return;
         if(ProtectionListener.isInDangerZone(player.getLocation()))
             return;
+        Land land = LandManager.getLandAtLocation(player.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+        if(land != null) {
+            if(!land.canBuild(player))
+                return;
+        }
+        Province province = ProvinceManager.getProvinceAtLocation(event.getPlayer().getLocation(), HeroCraft.getPlugin().getProvinceManager().getProvinces());
+        if(province != null) {
+            if(!province.canBuild(player)) {
+                return;
+            }
+        }
         Snowball projectile = player.launchProjectile(Snowball.class);
         projectile.setVelocity(projectile.getVelocity().multiply(2.5));
         projectile.setCustomName("Shield");

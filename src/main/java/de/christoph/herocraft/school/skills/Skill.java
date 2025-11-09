@@ -52,7 +52,7 @@ public abstract class Skill {
         player.closeInventory();
         player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 3, 1);
         player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20*5, 500));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 20*5, 1000));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 20*5, 1000));
         player.sendTitle("§e§l...", "§7Du lernst die Fähigkeit " + name);
         saveInConfig(player);
         onSkillLearned(player);
@@ -103,8 +103,10 @@ public abstract class Skill {
             PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM `skills` WHERE `uuid` = ?");
             preparedStatement.setString(1, player.getUniqueId().toString() + getName());
             ResultSet resultSet = preparedStatement.executeQuery();
-            while(resultSet.next())
+            while(resultSet.next()) {
+                System.out.println("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
                 return true;
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -114,6 +116,7 @@ public abstract class Skill {
     public void activateSkill(Player player, int skillLevel) {
         if(players.containsKey(player))
             return;
+        System.out.println("Elefant100");
         players.put(player, skillLevel);
         onSkillActivated(player);
     }
@@ -146,15 +149,15 @@ public abstract class Skill {
     }
 
     public void leaveTraining(Player player) {
-        if(!player.getWorld().getName().equalsIgnoreCase("hero"))
+        if(!player.getWorld().getName().equalsIgnoreCase("world"))
             return;
         endTraining(player);
-        player.teleport(new Location(Bukkit.getWorld("world"), 172.55, 132, -216.5));
+        player.teleport(new Location(Bukkit.getWorld("world"), 77.5, 88.5, -229.5, -90F, 0.7F));
         player.sendTitle("§e§lTraining verlassen", "");
     }
 
     public void makeTrainingProgress(Player player) {
-        if(!player.getWorld().getName().equalsIgnoreCase("hero")) {
+        if(!player.getWorld().getName().equalsIgnoreCase("world")) {
             endTraining(player);
             player.sendTitle("§e§lTraining verlassen", "");
             return;

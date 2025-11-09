@@ -33,6 +33,24 @@ public class CityBlock implements Listener {
     @EventHandler
     public void onFurniturePlace(FurniturePlaceSuccessEvent event) {
         Player player = event.getPlayer();
+        System.out.println(event.getFurniture().getDisplayName());
+        if(event.getFurniture().getDisplayName().contains("§7Stadt:")) {
+            Land land = LandManager.getLandAtLocation(event.getFurniture().getEntity().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+            if(!land.canBuild(player) || land == null) {
+                player.sendMessage(Constant.PREFIX + "§7Setze den Stadtblock in dein §cLand§7.");
+                event.getFurniture().remove(false);
+                ItemStack newCityBlock = HeroCraft.getItemsAdderItem("§4§lStadt");
+                ItemMeta itemMeta = newCityBlock.getItemMeta();
+                itemMeta.setDisplayName(event.getFurniture().getDisplayName());
+                newCityBlock.setItemMeta(itemMeta);
+                player.getInventory().addItem(newCityBlock);
+                player.sendMessage(Constant.PREFIX + "§7Bitte setze den Stadt-Block nun an eine andere Stelle des Landes.");
+                return;
+            }
+            event.getFurniture().getEntity().setCustomName(event.getFurniture().getDisplayName());
+            event.getFurniture().getEntity().setCustomNameVisible(true);
+            return;
+        }
         if(!event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lStadt"))
             return;
         Land land = LandManager.getLandAtLocation(event.getFurniture().getEntity().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
@@ -46,6 +64,16 @@ public class CityBlock implements Listener {
             }
             player.getInventory().addItem(goverment);
             player.sendMessage(Constant.PREFIX + "§7Bitte setze die Stadt auf dein Land.");
+            return;
+        }
+        if(TownHall.townhallProvinceCreationPlayers.containsKey(player)) {
+            // Creation with TownHall first
+            Province province = TownHall.townhallProvinceCreationPlayers.get(player);
+            event.getFurniture().getEntity().setCustomName("§7Stadt: §e§l" + province.getName());
+            event.getFurniture().getEntity().setCustomNameVisible(true);
+            HeroCraft.getPlugin().getProvinceManager().getProvinces().add(province);
+            HeroCraft.getPlugin().getProvinceManager().saveProvince(province);
+            player.sendMessage(Constant.PREFIX + "§7Stadt erfolgreich §aerstellt§7.");
             return;
         }
         player.sendMessage(Constant.PREFIX + "§7Gebe in den Chat ein: §aWie soll die Stadt heißen?");
@@ -67,8 +95,19 @@ public class CityBlock implements Listener {
         Player player = event.getPlayer();
         if(!event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lStadt"))
             return;
-        event.setCancelled(true);
-        player.sendMessage(Constant.PREFIX + "§7Momentan kannst du Städte noch nicht umsetzen.");
+        if(!event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lStadt"))
+            return;
+        Land land = LandManager.getLandAtLocation(event.getFurniture().getEntity().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+        if(land == null)
+            return;
+        String provinceName = event.getFurniture().getEntity().getCustomName();
+        event.getBukkitEntity().remove();
+        ItemStack newCityBlock = HeroCraft.getItemsAdderItem("§4§lStadt");
+        ItemMeta itemMeta = newCityBlock.getItemMeta();
+        itemMeta.setDisplayName(provinceName);
+        newCityBlock.setItemMeta(itemMeta);
+        player.getInventory().addItem(newCityBlock);
+        player.sendMessage(Constant.PREFIX + "§7Bitte setze den Stadt-Block nun an eine andere Stelle des Landes.");
     }
 
     @EventHandler
@@ -178,7 +217,7 @@ public class CityBlock implements Listener {
     @EventHandler
     public void onFurnitureClick(FurnitureInteractEvent event) {
         Player player = event.getPlayer();
-        if(!event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lStadt"))
+        if(!event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lStadt") && !event.getFurniture().getDisplayName().contains("§7Stadt:"))
             return;
         Land land = LandManager.getLandAtLocation(event.getFurniture().getEntity().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
         if(land == null)

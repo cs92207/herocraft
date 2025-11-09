@@ -9,7 +9,6 @@ import dev.lone.itemsadder.api.CustomFurniture;
 import dev.lone.itemsadder.api.CustomStack;
 import dev.lone.itemsadder.api.Events.FurnitureInteractEvent;
 import dev.lone.itemsadder.api.ItemsAdder;
-import net.minecraft.world.item.Items;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -63,8 +62,8 @@ public class HeroKeaListener implements Listener {
             return;
         String priceText = event.getCurrentItem().getItemMeta().getLore().get(1);
         priceText = priceText.substring(3);
-        String numbersOnly = priceText.replaceAll("[^0-9]", "");
-        int price = Integer.parseInt(numbersOnly);
+        String numbersOnly = priceText.replaceAll("[^0-9.]", "");
+        double price = Double.parseDouble(numbersOnly);
         System.out.println(numbersOnly);
         System.out.println(price);
         if(HeroCraft.getPlugin().coin.getCoins(player) < price) {
@@ -93,6 +92,7 @@ public class HeroKeaListener implements Listener {
         Sign sign = (Sign) event.getClickedBlock().getState();
         if(!sign.getLine(0).equalsIgnoreCase("§7[§e§lAnyKea§7]"))
             return;
+        event.setCancelled(true);
         if(sign.getLine(2).equalsIgnoreCase("§fStühle")) {
             Inventory inventory = Bukkit.createInventory(null, 9*5, "§4§lAnyKea");
             for(CustomStack customStack : ItemsAdder.getAllItems()) {

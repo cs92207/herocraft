@@ -22,19 +22,19 @@ public class MagicCommand implements CommandExecutor {
                     ItemMeta itemMeta = itemStack.getItemMeta();
                     if(strings.length == 2) {
                         if(strings[0].equalsIgnoreCase("luck")) {
-                            itemMeta.addEnchant(Enchantment.LUCK, Integer.parseInt(strings[1]), true);
+                            itemMeta.addEnchant(Enchantment.LUCK_OF_THE_SEA, Integer.parseInt(strings[1]), true);
                             itemStack.setItemMeta(itemMeta);
                             player.sendMessage(Constant.PREFIX + "§7Das Item aus deiner Hand wurde §averzaubert§7.");
                             player.getInventory().clear(player.getInventory().getHeldItemSlot());
                             player.getInventory().setItem(player.getInventory().getHeldItemSlot(), itemStack);
                         } else if(strings[0].equalsIgnoreCase("sharpness")) {
-                            itemMeta.addEnchant(Enchantment.DAMAGE_ALL, Integer.parseInt(strings[1]), true);
+                            itemMeta.addEnchant(Enchantment.SHARPNESS, Integer.parseInt(strings[1]), true);
                             itemStack.setItemMeta(itemMeta);
                             player.sendMessage(Constant.PREFIX + "§7Das Item aus deiner Hand wurde §averzaubert§7.");
                             player.getInventory().clear(player.getInventory().getHeldItemSlot());
                             player.getInventory().setItem(player.getInventory().getHeldItemSlot(), itemStack);
                         } else if(strings[0].equalsIgnoreCase("efficiency")) {
-                            itemMeta.addEnchant(Enchantment.DIG_SPEED, Integer.parseInt(strings[1]), true);
+                            itemMeta.addEnchant(Enchantment.EFFICIENCY, Integer.parseInt(strings[1]), true);
                             itemStack.setItemMeta(itemMeta);
                             player.sendMessage(Constant.PREFIX + "§7Das Item aus deiner Hand wurde §averzaubert§7.");
                             player.getInventory().clear(player.getInventory().getHeldItemSlot());

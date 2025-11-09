@@ -1,7 +1,6 @@
 package de.christoph.herocraft.home;
 
 import de.christoph.herocraft.HeroCraft;
-import it.unimi.dsi.fastutil.Hash;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;

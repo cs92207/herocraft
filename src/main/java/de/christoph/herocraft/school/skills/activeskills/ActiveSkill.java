@@ -1,6 +1,7 @@
 package de.christoph.herocraft.school.skills.activeskills;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.school.MentorListener;
 import de.christoph.herocraft.school.skills.Skill;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -20,8 +21,13 @@ public abstract class ActiveSkill extends Skill {
     public void onPlayerJoined(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         if(isInDatabase(player)) {
+            System.out.println("elefant1");
             if(!HeroCraft.getPlugin().getSkillManager().isSkillsActive(player))
                 return;
+            System.out.println("elefan2");
+            if(MentorListener.hasSkillDeActivated(player, getName()))
+                return;
+            System.out.println("elefant3");
             HeroCraft.getPlugin().getSkillManager().skills.get(getName()).activateSkill(player, getSkillLevel(player));
         }
     }
@@ -30,6 +36,8 @@ public abstract class ActiveSkill extends Skill {
         final Player player = event.getPlayer();
         if(isInDatabase(player)) {
             if(!HeroCraft.getPlugin().getSkillManager().isSkillsActive(player))
+                return;
+            if(MentorListener.hasSkillDeActivated(player, getName()))
                 return;
             Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
                 @Override

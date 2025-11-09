@@ -1,12 +1,13 @@
 package de.christoph.herocraft.lands;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.lands.roles.LandPermission;
+import de.christoph.herocraft.lands.roles.LandRole;
 import de.christoph.herocraft.utils.Constant;
 import de.christoph.herocraft.utils.ItemBuilder;
 //import dev.lone.itemsadder.api.ItemsAdder;
 import dev.lone.itemsadder.api.CustomStack;
 import dev.lone.itemsadder.api.ItemsAdder;
-import it.unimi.dsi.fastutil.Hash;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
@@ -49,10 +50,11 @@ public class Goverment implements Listener {
     public static ArrayList<Player> resizePlayers = new ArrayList<>();
     public static ArrayList<Player> resizeOnePlayers = new ArrayList<>();
     public static ArrayList<Player> resizeWaitingPlayers = new ArrayList<>();
+    public static ArrayList<Player> setPrisonSpawnPlayers = new ArrayList<>();
 
     private static void openGovermentGUI(Player player, Land land) {
         Inventory inventory = Bukkit.createInventory(null, 9*5, ":offset_-16::goverment:");
-        inventory.setItem(11, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§7Coins: §e§l" + land.getCoins()).build());
+        inventory.setItem(11, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§7Coins: §e§l" + land.getCoins()).setLore("§7Armee Coins: §e§l" + land.getArmeeCoins()).build());
         inventory.setItem(15, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lMitglieder").build());
         inventory.setItem(28, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lCoins einzahlen").build());
         inventory.setItem(29, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lCoins einzahlen").build());
@@ -66,7 +68,7 @@ public class Goverment implements Listener {
     @EventHandler
     public void onGovermentGUIClick(dev.lone.itemsadder.api.Events.FurnitureInteractEvent event) {
         Player player = event.getPlayer();
-        if(event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lRegierungsgebäude")) {
+        if(event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lRegierungsgebäude") || event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lLand erstellen §0(Item platzieren)")) {
             Land land = LandManager.getLandAtLocation(event.getFurniture().getEntity().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
             if(land == null)
                 return;
@@ -123,8 +125,7 @@ public class Goverment implements Listener {
         inventory.setItem(29, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lCoins auszahlen").build());
         inventory.setItem(30, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lCoins auszahlen").build());
         inventory.setItem(32, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lSpawnpoint setzen").build());
-        inventory.setItem(33, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lSpawnpoint setzen").build());
-        inventory.setItem(34, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lSpawnpoint setzen").build());
+        inventory.setItem(34, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand Rollen verwalten").build());
         player.openInventory(inventory);
     }
 
@@ -290,9 +291,18 @@ public class Goverment implements Listener {
             player.sendMessage(Constant.PREFIX + "§4Sneake zum abbrechen!");
             payOutPlayers.add(player);
         } else if(displayName.equalsIgnoreCase("§4§lSpawnpoint setzen")) {
-            player.closeInventory();
-            player.sendMessage(Constant.PREFIX + "§7Sneake an der Stelle, wo der neue Spawnpoint sein soll.");
-            setLandPlayers.add(player);
+            if(event.getAction() == InventoryAction.PICKUP_HALF) { // Rightclicked
+                player.closeInventory();
+                player.sendMessage(Constant.PREFIX + "§7Sneake an der Stelle, wo der neue Spawnpoint sein soll.");
+                setLandPlayers.add(player);
+            } else { // Leftclicked
+                player.closeInventory();
+                player.sendMessage(Constant.PREFIX + "§7Sneake an der Stelle, wo der neue Gefängnis-Spawnpoint sein soll.");
+                setPrisonSpawnPlayers.add(player);
+            }
+
+        } else if(displayName.equalsIgnoreCase("§4§lLand Rollen verwalten")) {
+            HeroCraft.getPlugin().landRoleManager.openManageLandRolesInventory(player);
         } else if(displayName.equalsIgnoreCase("§4§lGröße ändern")) {
             if(event.getAction() == InventoryAction.PICKUP_HALF) { // Rightclicked
                 makeMaxBlocksHigher(player, land);
@@ -339,6 +349,16 @@ public class Goverment implements Listener {
             resizeWaitingPlayers.remove(player);
             player.sendMessage(Constant.PREFIX + "§7Vorgang abgebrochen");
         }
+        if(setPrisonSpawnPlayers.contains(player)) {
+            Land land = HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player);
+            if(!LandManager.getLandAtLocation(player.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands()).getName().equalsIgnoreCase(land.getName())) {
+                player.sendMessage(Constant.PREFIX + "§7Sneake in deinem Land!");
+                return;
+            }
+            land.setPrisonSpawnPoint(player.getLocation());
+            player.sendMessage(Constant.PREFIX + "§7Gefängnis-Spawnpoint gesetzt.");
+            setPrisonSpawnPlayers.remove(player);
+        }
         if(!setLandPlayers.contains(player))
             return;
         Land land = HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player);
@@ -372,6 +392,16 @@ public class Goverment implements Listener {
             player.sendMessage("§4Sneaken zum abbrechen!");
             payInPlayers.add(player);
         } else if(displayName.equalsIgnoreCase("§4§lAdmin Menu")) {
+            Land land = HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player);
+
+            ArrayList<LandPermission> perms = HeroCraft.getPlugin().landRoleManager.getLandPermissionFromPlayer(player, land);
+            if(perms != null) {
+                if(perms.contains(LandPermission.ADMIN_ACCESS)) {
+                    openGovermentAdminGUI(player, HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player));
+                    return;
+                }
+            }
+
             if(HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player).isModerator(player.getName()) ||HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player).isOwner(player.getName()))
                 openGovermentAdminGUI(player, HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player));
             else {
@@ -558,6 +588,9 @@ public class Goverment implements Listener {
         inventory.setItem(32, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lMitglied Befördern/Degradieren").build());
         inventory.setItem(33, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lMitglied Befördern/Degradieren").build());
         inventory.setItem(34, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lMitglied Befördern/Degradieren").build());
+        inventory.setItem(39, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lRolle ändern").build());
+        inventory.setItem(40, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lRolle ändern").build());
+        inventory.setItem(41, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lRolle ändern").build());
         player.openInventory(inventory);
         memberAdminDetailPagePlayers.put(player, currentPlayer);
     }
@@ -591,6 +624,19 @@ public class Goverment implements Listener {
                 player.sendMessage(Constant.PREFIX + "§7Spieler befördert.");
                 player.closeInventory();
             }
+        } else if(displayName.equalsIgnoreCase("§4§lRolle ändern")) {
+            Inventory inventory = Bukkit.createInventory(null, 9*5, "§4§lBenutzer Rollen verwalten");
+            ArrayList<LandRole> landRoles = HeroCraft.getPlugin().landRoleManager.getRolesFromLand(land);
+            Player target = Bukkit.getPlayer(memberAdminDetailPagePlayers.get(player));
+            for(LandRole i : landRoles) {
+                if(target != null && i.isPlayerMember(target)) {
+                    inventory.addItem(new ItemBuilder(Material.GRAY_DYE).setDisplayName(i.getName()).setLore("", "§a§lSpieler ist in der Rolle", "", "§7(Klicke zum entfernen)").build());
+                } else {
+                    inventory.addItem(new ItemBuilder(Material.CYAN_DYE).setDisplayName(i.getName()).setLore("", "§c§lSpieler ist nicht in der Rolle", "", "§7(Klicke zum hinzufügen)").build());
+                }
+            }
+            HeroCraft.getPlugin().landRoleManager.rolePlayerEditPlayers.put(player, memberAdminDetailPagePlayers.get(player));
+            player.openInventory(inventory);
         }
     }
 

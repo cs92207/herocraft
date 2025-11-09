@@ -1,6 +1,7 @@
 package de.christoph.herocraft.school.skills.passiveskills;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.protection.ProtectionListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -14,21 +15,21 @@ import org.bukkit.potion.PotionEffectType;
 public class Speed extends PassiveSkill implements Listener {
 
     public Speed() {
-        super("§4§lGeschwindigkeit", "Werde schneller", 40, PotionEffectType.SPEED, new Location(Bukkit.getWorld("hero"), -671, 67, -268, 178.0F, 1.6F), "§7Laufe auf dem Laufband", 150);
+        super("§4§lGeschwindigkeit", "Werde schneller", 40, PotionEffectType.SPEED, new Location(Bukkit.getWorld("world"), 56, 77, -130), "§7Laufe auf dem Laufband", 150);
         Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
             @Override
             public void run() {
-                trainingLocation = new Location(Bukkit.getWorld("hero"), -671, 67, -268, 178.0F, 1.6F);
+                trainingLocation = new Location(Bukkit.getWorld("world"), 56, 77, -130);
             }
         }, 20*2);
     }
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
-        if(event.getPlayer().getLocation().getBlock().getLocation().getX() == -672 && event.getPlayer().getLocation().getBlock().getLocation().getZ() == -272) {
+        if(event.getPlayer().getLocation().getBlock().getLocation().getX() == 53 && event.getPlayer().getLocation().getBlock().getLocation().getZ() == -131) {
             if(trainingPlayers.containsKey(event.getPlayer())) {
                 makeTrainingProgress(event.getPlayer());
-                event.getPlayer().teleport(new Location(Bukkit.getWorld("hero"), -671.446, 67.5D, -269.416, 177.8F, 0.6F));
+                event.getPlayer().teleport(new Location(Bukkit.getWorld("world"), 55, 77.5, -130, 90, 8.7F));
             }
 
         }
@@ -48,7 +49,8 @@ public class Speed extends PassiveSkill implements Listener {
             return;
         if(block.getType() != Material.RED_CONCRETE)
             return;
-        leaveTraining(event.getPlayer());
+        if(ProtectionListener.isInDangerZone(block.getLocation()))
+            leaveTraining(event.getPlayer());
     }
 
 

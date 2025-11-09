@@ -1,11 +1,13 @@
 package de.christoph.herocraft.lands;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.prison.Prison;
 import de.christoph.herocraft.utils.Constant;
 import de.christoph.herocraft.utils.ItemBuilder;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
@@ -44,12 +46,12 @@ public class LandGUI implements CommandExecutor, Listener {
         inventory.setItem(10, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lZum Land teleportieren").build());
         inventory.setItem(13, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand besuchen").build());
         inventory.setItem(16, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand verlassen").build());
-            inventory.setItem(28, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lNach Land Scannen").build());
-            inventory.setItem(29, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lNach Land Scannen").build());
-            inventory.setItem(30, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lNach Land Scannen").build());
-            inventory.setItem(32, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand erstellen").build());
-            inventory.setItem(33, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand erstellen").build());
-            inventory.setItem(34, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand erstellen").build());
+        inventory.setItem(28, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lNach Land Scannen").build());
+        inventory.setItem(29, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lNach Land Scannen").build());
+        inventory.setItem(30, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lNach Land Scannen").build());
+        inventory.setItem(32, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand erstellen").build());
+        inventory.setItem(33, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand erstellen").build());
+        inventory.setItem(34, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand erstellen").build());
 
         player.openInventory(inventory);
         return false;
@@ -69,6 +71,10 @@ public class LandGUI implements CommandExecutor, Listener {
             return;
         String displayName = event.getCurrentItem().getItemMeta().getDisplayName();
         if(displayName.equalsIgnoreCase("§4§lZum Land teleportieren")) {
+            if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
+                player.sendMessage(Constant.PREFIX + "§7Das darfst du nicht im Gefängnis. Baue Obsidian ab, oder verlasse dein Land §0(§e/land§0)§7.");
+                return;
+            }
             Land land = HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player);
             if(land == null) {
                 player.sendMessage(Constant.PREFIX + "§7Du bist kein Teil eines Landes.");
@@ -77,6 +83,10 @@ public class LandGUI implements CommandExecutor, Listener {
             land.teleportTo(player);
             player.sendMessage(Constant.PREFIX + "§7Du wurdest zum Land §a" + land.getName() + "§7 teleportiert.");
         } else if(displayName.equalsIgnoreCase("§4§lLand besuchen")) {
+            if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
+                player.sendMessage(Constant.PREFIX + "§7Das darfst du nicht im Gefängnis. Baue Obsidian ab, oder verlasse dein Land §0(§e/land§0)§7.");
+                return;
+            }
             visitPlayers.add(player);
             player.sendMessage(Constant.PREFIX + "§7Gebe den Namen des Landes ein, welches du besuchen willst.");
             player.sendMessage("§4Sneaken zum abbrechen!");
@@ -100,6 +110,13 @@ public class LandGUI implements CommandExecutor, Listener {
             }
             land.removeMember(player.getName());
             player.sendMessage(Constant.PREFIX + "§7Land verlassen.");
+            if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
+                player.sendTitle("§a§lBefreit", "§7Du bist nun nicht mehr im Gefängnis");
+                player.teleport(new Location(Bukkit.getWorld("world"), 77.5, 88.5, -229.5, -90F, 0.7F));
+                Prison prison = HeroCraft.getPlugin().prisonManager.prisonPlayers.get(player);
+                prison.setObsidianAmount(0);
+                HeroCraft.getPlugin().prisonManager.prisonPlayers.remove(player);
+            }
         }
     }
 
@@ -122,6 +139,10 @@ public class LandGUI implements CommandExecutor, Listener {
         Land land = HeroCraft.getPlugin().getLandManager().getLandByName(event.getMessage());
         if(land == null) {
             player.sendMessage(Constant.PREFIX + "§7Dieses Land existiert §cnicht§7. Versuche es erneut.");
+            return;
+        }
+        if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
+            player.sendMessage(Constant.PREFIX + "§7Das darfst du nicht im Gefängnis. Baue Obsidian ab, oder verlasse dein Land §0(§e/land§0)§7.");
             return;
         }
         visitPlayers.remove(player);

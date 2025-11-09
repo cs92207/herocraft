@@ -12,6 +12,9 @@ public class Nether extends Dimension {
             new String[]{
                 "Kann nur über Portale erreicht werden"
             },
+            new String[]{
+
+            },
                 Material.NETHERRACK);
     }
 

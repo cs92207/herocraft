@@ -41,6 +41,9 @@ public class InventoryInsurance extends Insurance implements Listener {
             }
             return;
         }
+        if(HeroCraft.getPlugin().raidManager.isPlayerInRaid(player)) {
+            return;
+        }
         ItemStack[] inventoryContents = player.getInventory().getContents();
         ItemStack[] armorContents = player.getInventory().getArmorContents();
         player.sendMessage(Constant.PREFIX + "§7Da du eine Inventar Versicherung hast, wird dein Inventar wieder hergestellt...");

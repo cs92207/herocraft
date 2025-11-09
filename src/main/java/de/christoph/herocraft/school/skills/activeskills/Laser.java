@@ -23,11 +23,11 @@ public class Laser extends ActiveSkill implements Listener {
     public static ArrayList<Player> laserPlayers = new ArrayList<Player>();
 
     public Laser() {
-        super("§4§lLaser", "Sneake und schlage in die Luft, um Laser zu verschießen", 250, new Location(Bukkit.getWorld("hero"), -694, 68.5, -234, 90.1F, 1F), "§7Schieße auf das Ziel", 80);
+        super("§4§lLaser", "Sneake und schlage in die Luft, um Laser zu verschießen", 250, new Location(Bukkit.getWorld("world"), -67, 83, -163), "§7Schieße auf das Ziel", 80);
         Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
             @Override
             public void run() {
-                trainingLocation = new Location(Bukkit.getWorld("hero"), -694, 68.5, -234, 90.1F, 1F);
+                trainingLocation = new Location(Bukkit.getWorld("world"), -67, 83, -163);
             }
         }, 20*2);
     }
@@ -66,7 +66,8 @@ public class Laser extends ActiveSkill implements Listener {
             return;
         if(block.getType() != Material.RED_CONCRETE)
             return;
-        leaveTraining(event.getPlayer());
+        if(ProtectionListener.isInDangerZone(block.getLocation()))
+            leaveTraining(event.getPlayer());
     }
 
 
@@ -103,7 +104,7 @@ public class Laser extends ActiveSkill implements Listener {
         for (double i = 0; i < length; i += particleDistance) {
             Location location = start.clone().add(direction.clone().multiply(i));
             location.setY(location.getY() + 1);
-            world.spawnParticle(Particle.REDSTONE, location, 1, new Particle.DustOptions(Color.fromRGB(0, 0, 255), 1));
+            world.spawnParticle(Particle.DUST, location, 1, new Particle.DustOptions(Color.fromRGB(0, 0, 255), 1));
         }
     }
 

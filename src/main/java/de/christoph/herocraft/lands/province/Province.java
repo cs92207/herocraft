@@ -78,4 +78,8 @@ public class Province {
         return world;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
 }

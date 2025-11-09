@@ -3,19 +3,15 @@ package de.christoph.herocraft.protection;
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.basiccommands.SpawnCommand;
 import de.christoph.herocraft.basiccommands.VanishCommand;
-import de.christoph.herocraft.challenges.Challenge;
 import de.christoph.herocraft.lands.Land;
 import de.christoph.herocraft.lands.LandManager;
-import de.christoph.herocraft.market.herokea.HeroKeaListener;
 import de.christoph.herocraft.scoreboard.ScoreboardManager;
+import de.christoph.herocraft.teleporter.Teleporter;
 import de.christoph.herocraft.utils.Constant;
 import dev.lone.itemsadder.api.CustomStack;
 import dev.lone.itemsadder.api.Events.FurnitureBreakEvent;
 import dev.lone.itemsadder.api.ItemsAdder;
-import net.minecraft.world.entity.EntityInsentient;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_20_R1.entity.CraftBee;
-import org.bukkit.entity.Bee;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Pig;
 import org.bukkit.entity.Player;
@@ -30,6 +26,7 @@ import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.raid.RaidTriggerEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -37,12 +34,75 @@ import java.util.List;
 
 public class ProtectionListener implements Listener {
 
+
+    // Probieren: Regierungsgebäude Land erstellen, Teleporter Item
+    // Machen: Land erstellen per FastLandCreationCommand verbessern mit Regierungsgebäude platzieren und Location aussuchen
+
+
+
+
+
+
+
+
+    @EventHandler
+    public void onPlayerThrow(ProjectileLaunchEvent event) {
+        if (!(event.getEntity().getShooter() instanceof Player)) return;
+        Player player = (Player) event.getEntity().getShooter();
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if(item.getType().equals(Material.WIND_CHARGE)) {
+            event.setCancelled(true);
+            player.sendMessage(Constant.PREFIX + "§7Du darfst die §cWindkugel §7nicht werfen!");
+        }
+    }
+
+
+
+
+
+
     private static boolean isInSpawn(Location location) {
         if(!location.getWorld().getName().equalsIgnoreCase("world")) {
             return false;
         }
-        if(location.getX() >= 70 && location.getX() <= 220) {
-            if(location.getZ() <= -154 && location.getZ() >= -270) {
+        if(location.getX() >= 20 && location.getX() <= 270) {
+            if(location.getZ() <= -105 && location.getZ() >= -327) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isInBlackDessertSpawn(Location location) {
+        if(!location.getWorld().getName().equalsIgnoreCase("blackDessert")) {
+            return false;
+        }
+        if(location.getX() >= -187 && location.getX() <= -29) {
+            if(location.getZ() <= 300 && location.getZ() >= 132) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isInDessertSpawn(Location location) {
+        if(!location.getWorld().getName().equalsIgnoreCase("dessert")) {
+            return false;
+        }
+        if(location.getX() >= 170 && location.getX() <= 300) {
+            if(location.getZ() <= 140 && location.getZ() >= 15) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isInNatureSpawn(Location location) {
+        if(!location.getWorld().getName().equalsIgnoreCase("nature")) {
+            return false;
+        }
+        if(location.getX() >= 170 && location.getX() <= 300) {
+            if(location.getZ() <= 140 && location.getZ() >= 15) {
                 return true;
             }
         }
@@ -94,6 +154,12 @@ public class ProtectionListener implements Listener {
     public static boolean isInDangerZone(Location location) {
         if(isInSpawn(location))
             return true;
+        if(isInDessertSpawn(location))
+            return true;
+        if(isInBlackDessertSpawn(location))
+            return true;
+        if(isInNatureSpawn(location))
+            return true;
         if(location.getWorld().getName().equalsIgnoreCase("hero"))
             return true;
         if(!location.getWorld().getName().equalsIgnoreCase("world")) {
@@ -132,7 +198,7 @@ public class ProtectionListener implements Listener {
 
     @EventHandler
     public void onEntityExplode(EntityExplodeEvent event) {
-        if (event.getEntityType() == EntityType.PRIMED_TNT || event.getEntityType() == EntityType.MINECART_TNT) {
+        if (event.getEntityType() == EntityType.TNT || event.getEntityType() == EntityType.TNT_MINECART) {
             event.setCancelled(true);
         }
     }
@@ -152,6 +218,13 @@ public class ProtectionListener implements Listener {
             if(player.getGameMode() == GameMode.CREATIVE)
                 return;
         }
+
+        if(event.getEntity() instanceof Player) {
+            if(!(event.getDamager() instanceof Player)) {
+                Player player = (Player) event.getEntity();
+            }
+        }
+
         if(isInDangerZone(event.getDamager().getLocation())) {
             if(event.getEntity() instanceof Pig)
                 return;
@@ -198,35 +271,48 @@ public class ProtectionListener implements Listener {
             player.sendMessage("§7-- §e§lUpdate News §7--");
             player.sendMessage("");
         }
-        ScoreboardManager.setScoreboard(player);
+        Land land = HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player);
+        String suffix = "";
+        if(land != null) {
+            HeroCraft.getPlugin().landTagManager.landTags.put(player, HeroCraft.getPlugin().landTagManager.getTagFromLand(land.getName()));
+            ScoreboardManager.setScoreboard(player);
+            String landTag = HeroCraft.getPlugin().landTagManager.landTags.get(player);
+            suffix = " §0(§e" + landTag + "§0)";
+            if(landTag == "") {
+                suffix = "";
+            }
+        } else {
+            HeroCraft.getPlugin().landTagManager.landTags.put(player, "");
+        }
+
         if(player.hasPermission("prefix.admin"))
-            player.setPlayerListName("\uD83C\uDF40 §4" + player.getName());
+            player.setPlayerListName("\uD83C\uDF40 §4" + player.getName() + suffix);
         else if(player.hasPermission("prefix.modleitung"))
-            player.setPlayerListName("\uD83D\uDC8E §c" + player.getName());
+            player.setPlayerListName("\uD83D\uDC8E §c" + player.getName() + suffix);
         else if(player.hasPermission("prefix.builderleitung"))
-            player.setPlayerListName("\uD83C\uDF39 §3" + player.getName());
+            player.setPlayerListName("\uD83C\uDF39 §3" + player.getName() + suffix);
         else if(player.hasPermission("prefix.devleitung"))
-            player.setPlayerListName("\uD83C\uDF08 §b" + player.getName());
+            player.setPlayerListName("\uD83C\uDF08 §b" + player.getName() + suffix);
         else if(player.hasPermission("prefix.moderator"))
-            player.setPlayerListName("♚ §c" + player.getName());
+            player.setPlayerListName("♚ §c" + player.getName() + suffix);
         else if(player.hasPermission("prefix.supporter"))
-            player.setPlayerListName("✌ §a" + player.getName());
+            player.setPlayerListName("✌ §a" + player.getName() + suffix);
         else if(player.hasPermission("prefix.developer"))
-            player.setPlayerListName("\uD83C\uDCA1 §b" + player.getName());
+            player.setPlayerListName("\uD83C\uDCA1 §b" + player.getName() + suffix);
         else if(player.hasPermission("prefix.builder"))
-            player.setPlayerListName("∞ §3" + player.getName());
+            player.setPlayerListName("∞ §3" + player.getName() + suffix);
         else if(player.hasPermission("prefix.youtuber"))
-            player.setPlayerListName("¿ §5" + player.getName());
+            player.setPlayerListName("¿ §5" + player.getName() + suffix);
         else if(player.hasPermission("prefix.elite"))
-            player.setPlayerListName("¡ §2" + player.getName());
+            player.setPlayerListName("¡ §2" + player.getName() + suffix);
         else if(player.hasPermission("prefix.mvp"))
-            player.setPlayerListName("\uD83C\uDFB2 §9" + player.getName());
+            player.setPlayerListName("\uD83C\uDFB2 §9" + player.getName() + suffix);
         else if(player.hasPermission("prefix.vip"))
-            player.setPlayerListName("㋡ §d" + player.getName());
+            player.setPlayerListName("㋡ §d" + player.getName() + suffix);
         else if(player.hasPermission("prefix.premium"))
-            player.setPlayerListName("© §6" + player.getName());
+            player.setPlayerListName("© §6" + player.getName() + suffix);
         else
-            player.setPlayerListName("\uD81A\uDD10 §7" + player.getName());
+            player.setPlayerListName("\uD81A\uDD10 §7" + player.getName() + suffix);
         if(player.hasPermission("vanish.admin")) {
             player.sendMessage(Constant.PREFIX + "§7Standartmäßig befindest du dich im §aVanish§7.");
             VanishCommand.vanishPlayers.add(player);
@@ -288,24 +374,36 @@ public class ProtectionListener implements Listener {
                     }
                 }
                 player.getInventory().addItem(goverment2);
+                player.getInventory().addItem(Teleporter.getTeleporterItem());
+                ItemStack goverment3 = null;
+                for(CustomStack i : ItemsAdder.getAllItems()) {
+                    if(i.getDisplayName().equalsIgnoreCase("§4§lRegierungsgebäude")) {
+                        goverment3 = i.getItemStack();
+                    }
+                }
+                ItemMeta itemMeta = goverment3.getItemMeta();
+                itemMeta.setDisplayName("§4§lLand erstellen §0(Item platzieren)");
+                goverment3.setItemMeta(itemMeta);
+                player.getInventory().addItem(goverment3);
             }
         //} else {
         //    player.setGameMode(GameMode.SPECTATOR);
         //    player.sendMessage("§e§lHeroWars §7§l| §7Du bist Zuschauer.");
         //}
         if(!HeroCraft.getPlugin().getConfig().contains("Joined." + event.getPlayer().getUniqueId().toString())) {
-            player.teleport(new Location(Bukkit.getWorld("world"), 180.17, 129, -195.5));
+            player.teleport(new Location(Bukkit.getWorld("world"), 77.5, 88.5, -229.5, -90F, 0.7F));
             HeroCraft.getPlugin().getConfig().set("Joined." + event.getPlayer().getUniqueId().toString(), true);
             Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
                 @Override
                 public void run() {
                     ScoreboardManager.setScoreboard(player);
                     if(!player.getLocation().getWorld().getName().equalsIgnoreCase("world")) {
-                        player.teleport(new Location(Bukkit.getWorld("world"), 172.55, 132, -261.5));
+                        player.teleport(new Location(Bukkit.getWorld("world"), 77.5, 88.5, -229.5, -90F, 0.7F));
                     }
                 }
             }, 20);
         }
+        
     }
 
     @EventHandler
@@ -321,39 +419,44 @@ public class ProtectionListener implements Listener {
     public void onChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
         String message = event.getMessage();
+        String landTag = HeroCraft.getPlugin().landTagManager.landTags.get(player);
+        String suffix = " §0(§e" + landTag + "§0)";
+        if(landTag == "") {
+            suffix = "";
+        }
         message = message.replace("%", " Prozent");
         if(player.hasPermission("chat.color")) {
             message = message.replace("&", "§");
             message =  message.replace("§l", "&l");
         }
         if(player.hasPermission("prefix.admin"))
-            event.setFormat("\uD83C\uDF40 §4" + player.getName() + " » " + "§a" + message);
+            event.setFormat("\uD83C\uDF40 §4" + player.getName() + suffix + " » " + "§a" + message);
         else if(player.hasPermission("prefix.modleitung"))
-            event.setFormat("\uD83D\uDC8E §c" + player.getName() + " » " + "§a" + message);
+            event.setFormat("\uD83D\uDC8E §c" + player.getName() + suffix + " » " + "§a" + message);
         else if(player.hasPermission("prefix.builderleitung"))
-            event.setFormat("\uD83C\uDF39 §3" + player.getName() + " » " + "§a" + message);
+            event.setFormat("\uD83C\uDF39 §3" + player.getName() + suffix + " » " + "§a" + message);
         else if(player.hasPermission("prefix.devleitung"))
-            event.setFormat("\uD83C\uDF08 §b" + player.getName() + " » " + "§a" + message);
+            event.setFormat("\uD83C\uDF08 §b" + player.getName() + suffix + " » " + "§a" + message);
         else if(player.hasPermission("prefix.moderator"))
-            event.setFormat("♚ §c" + player.getName() + " » " + "§a" + message);
+            event.setFormat("♚ §c" + player.getName() + suffix + " » " + "§a" + message);
         else if(player.hasPermission("prefix.supporter"))
-            event.setFormat("✌ §a" + player.getName() + " » " + "§a" + message);
+            event.setFormat("✌ §a" + player.getName() + suffix + " » " + "§a" + message);
         else if(player.hasPermission("prefix.developer"))
-            event.setFormat("\uD83C\uDCA1 §b" + player.getName() + " » " + "§a" + message);
+            event.setFormat("\uD83C\uDCA1 §b" + player.getName() + suffix + " » " + "§a" + message);
         else if(player.hasPermission("prefix.builder"))
-            event.setFormat("∞ §3" + player.getName() + " » " + "§a" + message);
+            event.setFormat("∞ §3" + player.getName() + suffix + " » " + "§a" + message);
         else if(player.hasPermission("prefix.youtuber"))
-            event.setFormat("¿ §5" + player.getName() + " » " + "§e" + message);
+            event.setFormat("¿ §5" + player.getName() + suffix + " » " + "§e" + message);
         else if(player.hasPermission("prefix.elite"))
-            event.setFormat("¡ §2" + player.getName() + " » " + "§e" + message);
+            event.setFormat("¡ §2" + player.getName() + suffix + " » " + "§e" + message);
         else if(player.hasPermission("prefix.mvp"))
-            event.setFormat("\uD83C\uDFB2 §9" + player.getName() + " » " + "§e" + message);
+            event.setFormat("\uD83C\uDFB2 §9" + player.getName() + suffix + " » " + "§e" + message);
         else if(player.hasPermission("prefix.vip"))
-            event.setFormat("㋡ §d" + player.getName() + " » " + "§e" + message);
+            event.setFormat("㋡ §d" + player.getName() + suffix + " » " + "§e" + message);
         else if(player.hasPermission("prefix.premium"))
-            event.setFormat("© §6" + player.getName() + " » " + "§e" + message);
+            event.setFormat("© §6" + player.getName() + suffix + " » " + "§e" + message);
         else
-            event.setFormat("\uD81A\uDD10 §7" + player.getName() + " » " + "§e" + message);
+            event.setFormat("\uD81A\uDD10 §7" + player.getName() + suffix + " » " + "§e" + message);
     }
 
     @EventHandler
@@ -398,8 +501,6 @@ public class ProtectionListener implements Listener {
         if(HeroCraft.getPlugin().getConfig().contains("LastChallengeID")) {
             lastChallengeID = HeroCraft.getPlugin().getConfig().getInt("LastChallengeID");
             lastChallengeID++;
-            if(HeroCraft.getPlugin().getChallengeManager().challenges.size() <= lastChallengeID)
-                return;
         } else {
             lastChallengeID = 0;
         }

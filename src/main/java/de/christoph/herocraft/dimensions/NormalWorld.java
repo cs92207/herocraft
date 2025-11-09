@@ -12,6 +12,7 @@ public class NormalWorld extends Dimension {
                 new String[]{
                     ""
                 },
+                new String[]{},
                 Material.GRASS_BLOCK);
     }
 

@@ -3,7 +3,6 @@ package de.christoph.herocraft.insurance.insurances;
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.insurance.Insurance;
 import de.christoph.herocraft.utils.Constant;
-import it.unimi.dsi.fastutil.Hash;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;

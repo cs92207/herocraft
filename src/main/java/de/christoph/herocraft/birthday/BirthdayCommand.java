@@ -145,7 +145,7 @@ public class BirthdayCommand implements CommandExecutor, Listener {
                 player.sendMessage("§a+ Besonders Item");
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1, 1);
                 AnyBlocksAPI.getInstance().getAnyCoinsAPI().addAnyCoins(player.getUniqueId().toString(), 5);
-                player.getInventory().addItem(new ItemBuilder(Material.CAKE).setDisplayName("§4§l2. Geburtstag 2024").setLore("", "§7Danke, dass du mit uns", "§7Geburtstag gefeiert hast! <3").addEnchantment(Enchantment.LUCK, -1).build());
+                player.getInventory().addItem(new ItemBuilder(Material.CAKE).setDisplayName("§4§l2. Geburtstag 2024").setLore("", "§7Danke, dass du mit uns", "§7Geburtstag gefeiert hast! <3").addEnchantment(Enchantment.LUCK_OF_THE_SEA, -1).build());
                 Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
                     @Override
                     public void run() {

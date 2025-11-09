@@ -183,7 +183,7 @@ public class Auctioneers implements Listener {
 
                 if (itemMeta instanceof BannerMeta) {
                     BannerMeta bannerMeta = (BannerMeta) itemMeta;
-                    DyeColor baseColor = bannerMeta.getBaseColor();
+                    DyeColor baseColor = bannerMeta.getPattern(0).getColor();
                     if (baseColor != null) {
                         itemData.put("banner_base_color", baseColor.name());
                     }
@@ -266,7 +266,6 @@ public class Auctioneers implements Listener {
 
             if (itemData.containsKey("banner_base_color") && itemStack.getItemMeta() instanceof BannerMeta) {
                 BannerMeta bannerMeta = (BannerMeta) itemStack.getItemMeta();
-                bannerMeta.setBaseColor(DyeColor.valueOf((String) itemData.get("banner_base_color")));
                 if (itemData.containsKey("banner_patterns")) {
                     List<Map<String, String>> patterns = (List<Map<String, String>>) itemData.get("banner_patterns");
                     for (Map<String, String> patternData : patterns) {

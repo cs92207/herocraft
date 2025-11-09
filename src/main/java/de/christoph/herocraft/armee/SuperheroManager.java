@@ -7,11 +7,11 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.lands.Land;
 import de.christoph.herocraft.utils.Constant;
-import jline.internal.Nullable;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.Listener;
 import org.bukkit.potion.PotionEffectType;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.sql.PreparedStatement;

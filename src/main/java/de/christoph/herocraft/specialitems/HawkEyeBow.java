@@ -2,6 +2,8 @@ package de.christoph.herocraft.specialitems;
 
 import de.christoph.herocraft.lands.Land;
 import de.christoph.herocraft.lands.LandManager;
+import de.christoph.herocraft.lands.province.Province;
+import de.christoph.herocraft.lands.province.ProvinceManager;
 import de.christoph.herocraft.utils.Constant;
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.utils.ItemBuilder;
@@ -78,6 +80,13 @@ public class HawkEyeBow implements Listener {
             event.setCancelled(true);
             return;
         }
+        Province province = ProvinceManager.getProvinceAtLocation(player.getLocation(), HeroCraft.getPlugin().getProvinceManager().getProvinces());
+        if(province != null) {
+            if(!province.canBuild(player)) {
+                event.setCancelled(true);
+                return;
+            }
+        }
         if(ProtectionListener.isInDangerZone(player.getLocation())) {
             event.setCancelled(true);
             return;
@@ -98,6 +107,19 @@ public class HawkEyeBow implements Listener {
         if(!(event.getEntity().getShooter() instanceof Player))
             return;
         Player player = (Player) event.getEntity().getShooter();
+        Land land = LandManager.getLandAtLocation(player.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+        if(land == null) {
+            if(!land.canBuild(player)) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+        Province province = ProvinceManager.getProvinceAtLocation(player.getLocation(), HeroCraft.getPlugin().getProvinceManager().getProvinces());
+        if(province != null) {
+            if(!province.canBuild(player)) {
+                return;
+            }
+        }
         if(hawkEyePlayers.get(player) == BowMode.NORMAL)
             return;
         if(hawkEyePlayers.get(player) == BowMode.EXPLOSION)

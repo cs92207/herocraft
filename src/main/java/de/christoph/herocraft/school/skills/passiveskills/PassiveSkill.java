@@ -1,8 +1,8 @@
 package de.christoph.herocraft.school.skills.passiveskills;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.school.MentorListener;
 import de.christoph.herocraft.school.skills.Skill;
-import net.minecraft.advancements.critereon.CriterionTriggerUsedTotem;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -55,6 +55,10 @@ public abstract class PassiveSkill extends Skill {
         if(isInDatabase(event.getPlayer())) {
             if(!HeroCraft.getPlugin().getSkillManager().isSkillsActive(player))
                 return;
+            if(MentorListener.hasSkillDeActivated(player, getName())) {
+                player.removePotionEffect(effectType);
+                return;
+            }
             HeroCraft.getPlugin().getSkillManager().skills.get(getName()).activateSkill(player, getSkillLevel(player));
         }
     }
@@ -65,6 +69,8 @@ public abstract class PassiveSkill extends Skill {
         players.remove(player);
         if(isInDatabase(event.getPlayer())) {
             if(!HeroCraft.getPlugin().getSkillManager().isSkillsActive(player))
+                return;
+            if(MentorListener.hasSkillDeActivated(player, getName()))
                 return;
             Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
                 @Override

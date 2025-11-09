@@ -1,7 +1,12 @@
 package de.christoph.herocraft.specialitems;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.lands.Land;
+import de.christoph.herocraft.lands.LandManager;
+import de.christoph.herocraft.lands.province.Province;
+import de.christoph.herocraft.lands.province.ProvinceManager;
 import de.christoph.herocraft.protection.ProtectionListener;
+import de.christoph.herocraft.utils.Constant;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
@@ -44,6 +49,19 @@ public class Pistol implements Listener {
         }
         if(ProtectionListener.isInDangerZone(player.getLocation()))
             return;
+        Land land = LandManager.getLandAtLocation(player.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+        if(land != null) {
+            if(!land.canBuild(player)) {
+                player.sendMessage(Constant.PREFIX + "§7Du kannst in anderen Ländern nicht schießen.");
+                return;
+            }
+        }
+        Province province = ProvinceManager.getProvinceAtLocation(player.getLocation(), HeroCraft.getPlugin().getProvinceManager().getProvinces());
+        if(province != null) {
+            if(!province.canBuild(player)) {
+                return;
+            }
+        }
         if(pistolPlayers.containsKey(player)) {
             Arrow arrow = player.launchProjectile(Arrow.class);
             arrow.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);

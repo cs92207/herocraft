@@ -6,6 +6,7 @@ import dev.lone.itemsadder.api.ItemsAdder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapedRecipe;
 
 public class WorkShopRecipeLoader {
@@ -18,6 +19,63 @@ public class WorkShopRecipeLoader {
         loadSpidermansNetshooterRecipe();
         loadJetPackRecipe();
         loadMjoelnirRecipe();
+
+        loadScaleStickRecipe();
+        loadDarkWeaponRecipe();
+        loadNatureSwordRecipe();
+        loadSandstormRecipe();
+    }
+
+    private void loadScaleStickRecipe() {
+        ShapedRecipe shapedRecipe = new ShapedRecipe(getItemsAdderItem("§4§lScale Waffe"));
+        RecipeChoice.ExactChoice specialChoice = new RecipeChoice.ExactChoice(getItemsAdderItem("§4§lDunkler Stab"));
+        shapedRecipe.shape("NDN", "DKD", "NDN");
+        shapedRecipe.setIngredient('N', Material.NETHERITE_INGOT);
+        shapedRecipe.setIngredient('K', Material.HEAVY_CORE);
+        shapedRecipe.setIngredient('D', specialChoice);
+        Bukkit.addRecipe(shapedRecipe);
+    }
+
+    private void loadSandstormRecipe() {
+        ShapedRecipe shapedRecipe = new ShapedRecipe(getItemsAdderItem("§4§lSandsturm"));
+        RecipeChoice.ExactChoice specialChoice = new RecipeChoice.ExactChoice(getItemsAdderItem("§4§lWüsten Herz"));
+        shapedRecipe.shape("APA", "PHP", "APA");
+        shapedRecipe.setIngredient('P', Material.PHANTOM_MEMBRANE);
+        shapedRecipe.setIngredient('H', specialChoice);
+        Bukkit.addRecipe(shapedRecipe);
+    }
+
+    private void loadDarkWeaponRecipe() {
+        ShapedRecipe shapedRecipe = new ShapedRecipe(getItemsAdderItem("§4§lDunkler Stab"));
+        RecipeChoice.ExactChoice specialChoice = new RecipeChoice.ExactChoice(getItemsAdderItem("§4§lDunkles Herz"));
+
+        shapedRecipe.shape("APP", "AHP", "SAA");
+        shapedRecipe.setIngredient('P', Material.PURPLE_STAINED_GLASS);
+        shapedRecipe.setIngredient('H', specialChoice);
+        shapedRecipe.setIngredient('S', Material.STICK);
+        Bukkit.addRecipe(shapedRecipe);
+    }
+
+    private void loadNatureSwordRecipe() {
+        ShapedRecipe shapedRecipe = new ShapedRecipe(getItemsAdderItem("§4§lNatur Schwert"));
+        RecipeChoice.ExactChoice specialChoice = new RecipeChoice.ExactChoice(getItemsAdderItem("§4§lDark Crystal"));
+        shapedRecipe.shape("ARV", "ACB", "SAA");
+        shapedRecipe.setIngredient('R', Material.RED_TULIP);
+        shapedRecipe.setIngredient('V', Material.ALLIUM);
+        shapedRecipe.setIngredient('C', specialChoice);
+        shapedRecipe.setIngredient('B', Material.CORNFLOWER);
+        shapedRecipe.setIngredient('S', Material.STICK);
+        Bukkit.addRecipe(shapedRecipe);
+    }
+
+    private ItemStack getItemsAdderItem(String name) {
+        ItemStack itemStack = null;
+        for(CustomStack i : ItemsAdder.getAllItems()) {
+            if(i.getDisplayName().equalsIgnoreCase(name)) {
+                itemStack = i.getItemStack();
+            }
+        }
+        return itemStack;
     }
 
     private void loadPistolRecipe() {

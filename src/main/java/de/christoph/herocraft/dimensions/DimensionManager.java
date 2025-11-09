@@ -18,6 +18,7 @@ public class DimensionManager implements Listener {
     private ArrayList<Dimension> dimensions;
 
     private int taskID;
+    private int taskID2;
 
     public DimensionManager() {
         registerDimensions();
@@ -33,7 +34,17 @@ public class DimensionManager implements Listener {
                 }
             }
         }, 20, 20*10);
+        taskID2 = Bukkit.getScheduler().scheduleSyncRepeatingTask(HeroCraft.getPlugin(), new Runnable() {
+            @Override
+            public void run() {
+                for(Dimension dimension : dimensions) {
+                    dimension.onScoreboardTick();
+                }
+            }
+        }, 20, 40);
     }
+
+
 
     private void registerDimensions() {
         dimensions = new ArrayList<>();
@@ -55,6 +66,18 @@ public class DimensionManager implements Listener {
         BlackDessert blackDessert = new BlackDessert();
         Bukkit.getPluginManager().registerEvents(blackDessert, HeroCraft.getPlugin());
         dimensions.add(blackDessert);
+        AutumDimension autumDimension = new AutumDimension();
+        Bukkit.getPluginManager().registerEvents(autumDimension, HeroCraft.getPlugin());
+        dimensions.add(autumDimension);
+        WinterDimension winterDimension = new WinterDimension();
+        Bukkit.getPluginManager().registerEvents(winterDimension, HeroCraft.getPlugin());
+        dimensions.add(winterDimension);
+        SpringDimension springDimension = new SpringDimension();
+        Bukkit.getPluginManager().registerEvents(springDimension, HeroCraft.getPlugin());
+        dimensions.add(springDimension);
+        SummerDimension summerDimension = new SummerDimension();
+        Bukkit.getPluginManager().registerEvents(summerDimension, HeroCraft.getPlugin());
+        dimensions.add(summerDimension);
     }
 
     @EventHandler
@@ -75,7 +98,7 @@ public class DimensionManager implements Listener {
         String name = displayName.substring(4);
         Dimension dimension = getDimensionByName(name);
         player.closeInventory();
-        player.sendMessage(Constant.PREFIX + "§7Du wirst Random in die Dimension §a" + name + "§7 teleportiert.");
+        player.sendMessage(Constant.PREFIX + "§7Du wirst in die Dimension §a" + name + "§7 teleportiert.");
         if(dimension.getWorld().equalsIgnoreCase("world_nether")) {
             player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), 32, 52, 0));
             return;
@@ -88,7 +111,22 @@ public class DimensionManager implements Listener {
         int x = random.nextInt(350);
         int z = random.nextInt(350);
         int y = Bukkit.getWorld(dimension.getWorld()).getHighestBlockYAt(new Location(Bukkit.getWorld(dimension.getWorld()), x, 1, z));
-        player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), x, y, z));
+        if(dimension.getWorld().contains("nether") || dimension.getWorld().contains("end")) {
+            player.closeInventory();
+            player.sendMessage(Constant.PREFIX + "§7Diese Dimension kann nur durch ein §cPortal §7erreicht werden.");
+            return;
+        }
+        if(dimension.getWorld().contains("nature")) {
+            player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), 313, 65, -53));
+        } else if(dimension.getWorld().equalsIgnoreCase("dessert")) {
+            player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), 230, 74, 77));
+        } else if(dimension.getWorld().contains("blackDessert")) {
+            player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), -99, 69, 196));
+        } else if(dimension.getWorld().contains("world")) {
+            player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), 77.5, 88.5, -229.5, -90F, 0.7F));
+        } else {
+            player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), x, y, z));
+        }
     }
 
     @Nullable
@@ -106,6 +144,10 @@ public class DimensionManager implements Listener {
 
     public int getTaskID() {
         return taskID;
+    }
+
+    public int getTaskID2() {
+        return taskID2;
     }
 
 }

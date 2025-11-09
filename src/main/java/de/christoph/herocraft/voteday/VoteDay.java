@@ -36,7 +36,7 @@ public class VoteDay {
             all.sendMessage("");
             all.sendMessage("§0--- §e§lVote Day §0---");
             all.sendMessage("");
-            all.playSound(all.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1, 1);
+            all.playSound(all.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1, 1);
         }
         taskID = Bukkit.getScheduler().scheduleSyncRepeatingTask(HeroCraft.getPlugin(), new Runnable() {
             @Override
@@ -63,7 +63,7 @@ public class VoteDay {
             // Switch to day
             Bukkit.getWorld("world").setTime(0);
             for(Player all : Bukkit.getWorld("world").getPlayers()) {
-                all.playSound(all.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1 ,1);
+                all.playSound(all.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1 ,1);
                 all.sendMessage("");
                 all.sendMessage("");
                 all.sendMessage("");
@@ -82,7 +82,7 @@ public class VoteDay {
         } else {
             // Don´t change anything
             for(Player all : Bukkit.getWorld("world").getPlayers()) {
-                all.playSound(all.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1 ,1);
+                all.playSound(all.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1 ,1);
                 all.sendMessage("");
                 all.sendMessage("");
                 all.sendMessage("");

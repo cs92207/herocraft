@@ -23,6 +23,10 @@ public class CraftingRecipeCommand implements CommandExecutor, Listener {
     static ItemStack netShooter;
     static ItemStack pistol;
     static ItemStack capsShield;
+    static ItemStack darkStick;
+    static ItemStack natureSword;
+    static ItemStack sandstorm;
+    static ItemStack scaleStick;
 
     public static void loadStacks() {
         for(CustomStack customStack : ItemsAdder.getAllItems()) {
@@ -42,6 +46,18 @@ public class CraftingRecipeCommand implements CommandExecutor, Listener {
                 case "§4§lCaptain Americas Schild":
                     capsShield = customStack.getItemStack();
                     break;
+                case "§4§lDunkler Stab":
+                    darkStick = customStack.getItemStack();
+                    break;
+                case "§4§lNatur Schwert":
+                    natureSword = customStack.getItemStack();
+                    break;
+                case "§4§lSandsturm":
+                    sandstorm = customStack.getItemStack();
+                    break;
+                case "§4§lScale Waffe":
+                    scaleStick = customStack.getItemStack();
+                    break;
             }
         }
         hawkEyesBow = new ItemBuilder(Material.BOW).setDisplayName("§4§lHawk Eyes Bogen").setLore("", "§eRechtsklick §7» Pfeilart auswählen").build();
@@ -53,12 +69,16 @@ public class CraftingRecipeCommand implements CommandExecutor, Listener {
             return false;
         Player player = (Player) commandSender;
         Inventory inventory = Bukkit.createInventory(null, 9*5, ":offset_-16::recipes_inventory:");
-        inventory.addItem(mjolnir);
-        inventory.addItem(hawkEyesBow);
-        inventory.addItem(jetPack);
-        inventory.addItem(netShooter);
-        inventory.addItem(pistol);
-        inventory.addItem(capsShield);
+        inventory.setItem(9, mjolnir);
+        inventory.setItem(10, hawkEyesBow);
+        inventory.setItem(11, jetPack);
+        inventory.setItem(12, netShooter);
+        inventory.setItem(13, pistol);
+        inventory.setItem(14, capsShield);
+        inventory.setItem(18, sandstorm);
+        inventory.setItem(27, natureSword);
+        inventory.setItem(36, darkStick);
+        inventory.setItem(37, scaleStick);
         player.openInventory(inventory);
         return false;
     }
@@ -123,9 +143,47 @@ public class CraftingRecipeCommand implements CommandExecutor, Listener {
                 inventory.setItem(29, new ItemStack(Material.RED_DYE));
                 inventory.setItem(30, new ItemStack(Material.BLUE_DYE));
                 inventory.setItem(31, new ItemStack(Material.RED_DYE));
+            } else if(displayName.equalsIgnoreCase("§4§lDunkler Stab")) {
+                inventory.setItem(12, new ItemStack(Material.PURPLE_STAINED_GLASS));
+                inventory.setItem(13, new ItemStack(Material.PURPLE_STAINED_GLASS));
+                inventory.setItem(21, getItemsAdderItem("§4§lDunkles Herz"));
+                inventory.setItem(22, new ItemStack(Material.PURPLE_STAINED_GLASS));
+                inventory.setItem(29, new ItemStack(Material.STICK));
+            } else if(displayName.equalsIgnoreCase("§4§lScale Waffe")) {
+                inventory.setItem(11, new ItemStack(Material.NETHERITE_INGOT));
+                inventory.setItem(12, getItemsAdderItem("§4§lDunkler Stab"));
+                inventory.setItem(13, new ItemStack(Material.NETHERITE_INGOT));
+                inventory.setItem(20, getItemsAdderItem("§4§lDunkler Stab"));
+                inventory.setItem(21, new ItemStack(Material.HEAVY_CORE));
+                inventory.setItem(22, getItemsAdderItem("§4§lDunkler Stab"));
+                inventory.setItem(29, new ItemStack(Material.NETHERITE_INGOT));
+                inventory.setItem(30, getItemsAdderItem("§4§lDunkler Stab"));
+                inventory.setItem(31, new ItemStack(Material.NETHERITE_INGOT));
+            } else if(displayName.equalsIgnoreCase("§4§lSandsturm")) {
+                inventory.setItem(12, new ItemStack(Material.PHANTOM_MEMBRANE));
+                inventory.setItem(20, new ItemStack(Material.PHANTOM_MEMBRANE));
+                inventory.setItem(22, new ItemStack(Material.PHANTOM_MEMBRANE));
+                inventory.setItem(30, new ItemStack(Material.PHANTOM_MEMBRANE));
+                inventory.setItem(21, getItemsAdderItem("§4§lWüsten Herz"));
+            } else if(displayName.equalsIgnoreCase("§4§lNatur Schwert")) {
+                inventory.setItem(12, new ItemStack(Material.RED_TULIP));
+                inventory.setItem(13, new ItemStack(Material.ALLIUM));
+                inventory.setItem(22, new ItemStack(Material.CORNFLOWER));
+                inventory.setItem(29, new ItemStack(Material.STICK));
+                inventory.setItem(21, getItemsAdderItem("§4§lDark Crystal"));
             }
             player.openInventory(inventory);
         }
+    }
+
+    private ItemStack getItemsAdderItem(String name) {
+        ItemStack itemStack = null;
+        for(CustomStack i : ItemsAdder.getAllItems()) {
+            if(i.getDisplayName().equalsIgnoreCase(name)) {
+                itemStack = i.getItemStack();
+            }
+        }
+        return itemStack;
     }
 
 }

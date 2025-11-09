@@ -41,7 +41,8 @@ public class Smash extends ActiveSkill implements Listener {
             return;
         if(block.getType() != Material.RED_CONCRETE)
             return;
-        leaveTraining(event.getPlayer());
+        if(ProtectionListener.isInDangerZone(block.getLocation()))
+            leaveTraining(event.getPlayer());
     }
 
 

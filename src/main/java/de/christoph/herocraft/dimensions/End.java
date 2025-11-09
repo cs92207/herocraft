@@ -12,6 +12,9 @@ public class End extends Dimension {
                 new String[]{
                     "Kann nur über Portal erreicht werden"
                 },
+                new String[]{
+                    "Enderdrache"
+                },
                 Material.END_STONE
             );
     }

@@ -1,6 +1,7 @@
 package de.christoph.herocraft.school.skills.passiveskills;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.protection.ProtectionListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -19,11 +20,11 @@ public class Jump extends PassiveSkill implements Listener {
     private ArrayList<Player> trainingWaitingPlayers;
 
     public Jump() {
-        super("§4§lSprungkraft", "§7Bekomme einen Sprungboost", 80, PotionEffectType.JUMP,  new Location(Bukkit.getWorld("hero"), -592, 83, -234, 0.2F, 0.0F), "§7Springe auf der Fläche.", 150);
+        super("§4§lSprungkraft", "§7Bekomme einen Sprungboost", 80, PotionEffectType.JUMP_BOOST,   new Location(Bukkit.getWorld("world"), 54, 84, -150), "§7Springe auf der Fläche.", 150);
         Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
             @Override
             public void run() {
-                trainingLocation = new Location(Bukkit.getWorld("hero"), -592, 83, -234, 0.2F, 0.0F);
+                trainingLocation = new Location(Bukkit.getWorld("world"), 54, 84, -150);
             }
         }, 20*2);
         trainingWaitingPlayers = new ArrayList<>();
@@ -57,7 +58,8 @@ public class Jump extends PassiveSkill implements Listener {
             return;
         if(block.getType() != Material.RED_CONCRETE)
             return;
-        leaveTraining(event.getPlayer());
+        if(ProtectionListener.isInDangerZone(block.getLocation()))
+            leaveTraining(event.getPlayer());
     }
 
 

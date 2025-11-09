@@ -2,7 +2,6 @@ package de.christoph.herocraft.market;
 
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.utils.Constant;
-import it.unimi.dsi.fastutil.Hash;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -24,6 +23,13 @@ public class MarketCommand implements Listener {
     public static void buyItem(ItemStack itemStack, double price, Player player) {
         if(HeroCraft.getPlugin().coin.getCoins(player) >= price) {
             HeroCraft.getPlugin().coin.removeMoney(player, price);
+            if(itemStack.hasItemMeta() && itemStack.getItemMeta().hasDisplayName()) {
+                if(itemStack.getItemMeta().getDisplayName().equalsIgnoreCase("§4§lIce Cream")) {
+                    player.getInventory().addItem(HeroCraft.getItemsAdderItem("§4§lIce Cream"));
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 3, 3);
+                    return;
+                }
+            }
             itemStack.getItemMeta().setLore(new ArrayList<>());
             ItemStack itemStack1 = new ItemStack(itemStack.getType(), itemStack.getAmount());
             player.getInventory().addItem(itemStack1);

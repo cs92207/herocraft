@@ -2,6 +2,7 @@ package de.christoph.herocraft.school;
 
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.school.skills.Skill;
+import de.christoph.herocraft.school.skills.SkillManager;
 import de.christoph.herocraft.utils.Constant;
 import de.christoph.herocraft.utils.ItemBuilder;
 import dev.lone.itemsadder.api.CustomStack;
@@ -31,9 +32,11 @@ public class MentorCommand implements CommandExecutor {
                 inventory.setItem(44, getCustomItem("§fSearch", "§a§lSkills aktivieren"));
             int i = 19;
             for(Map.Entry<String, Skill> entry : HeroCraft.getPlugin().getSkillManager().skills.entrySet()) {
-                if(entry.getValue().getName().equalsIgnoreCase("§4§lStärke")) {
+                if(MentorListener.hasSkillDeActivated(player, entry.getValue().getName())) {
+                    inventory.setItem(i, new ItemBuilder(Material.POTION).setDisplayName(entry.getValue().getName()).setLore("§7" + entry.getValue().getDescription(), "", "§7Rechtsklick zum §a§laktivieren", "", "§7Skill §cdeaktiviert").build());
+                } else if(entry.getValue().getName().equalsIgnoreCase("§4§lStärke")) {
                     if(entry.getValue().players.containsKey(player))
-                        inventory.setItem(i, new ItemBuilder(Material.POTION).setDisplayName(entry.getValue().getName()).setLore("§7" + entry.getValue().getDescription(), "", "§aGelernt §7[§eLvl. " + entry.getValue().players.get(player) + "§7]", "§7Rechtsklick zum §a§ltrainieren.", "", "§7Coins: §e" + entry.getValue().getMinTrainingCoins(player)).build());
+                        inventory.setItem(i, new ItemBuilder(Material.POTION).setDisplayName(entry.getValue().getName()).setLore("§7" + entry.getValue().getDescription(), "", "§aGelernt §7[§eLvl. " + entry.getValue().players.get(player) + "§7]", "§7Linksklick zum §a§ltrainieren.", "§7Rechtsklick zum §c§ldeaktivieren§7/§a§laktivieren", "", "§7Coins: §e" + entry.getValue().getMinTrainingCoins(player)).build());
                     else {
                         if(!HeroCraft.getPlugin().getSkillManager().isSkillsActive(player)) {
                             inventory.setItem(i, new ItemBuilder(Material.POTION).setDisplayName(entry.getValue().getName()).setLore("§7" + entry.getValue().getDescription(), "", "§7Kosten: §e" + entry.getValue().getFirstCosts() + " Coins", "", "§cSkills nicht aktiviert").build());
@@ -46,8 +49,10 @@ public class MentorCommand implements CommandExecutor {
             for(Map.Entry<String, Skill> entry : HeroCraft.getPlugin().getSkillManager().skills.entrySet()) {
                 if(entry.getValue().getName().equalsIgnoreCase("§4§lStärke"))
                     continue;
-                if(entry.getValue().players.containsKey(player))
-                    inventory.setItem(i, new ItemBuilder(Material.POTION).setDisplayName(entry.getValue().getName()).setLore("§7" + entry.getValue().getDescription(), "", "§aGelernt §7[§eLvl. " + entry.getValue().players.get(player) + "§7]", "§7Rechtsklick zum §a§ltrainieren.", "", "§7Coins: §e" + entry.getValue().getMinTrainingCoins(player)).build());
+                if(MentorListener.hasSkillDeActivated(player, entry.getValue().getName())) {
+                    inventory.setItem(i, new ItemBuilder(Material.POTION).setDisplayName(entry.getValue().getName()).setLore("§7" + entry.getValue().getDescription(), "", "§7Rechtsklick zum §a§laktivieren", "", "§7Skill §cdeaktiviert").build());
+                } else if(entry.getValue().players.containsKey(player))
+                    inventory.setItem(i, new ItemBuilder(Material.POTION).setDisplayName(entry.getValue().getName()).setLore("§7" + entry.getValue().getDescription(), "", "§aGelernt §7[§eLvl. " + entry.getValue().players.get(player) + "§7]", "§7Linksklick zum §a§ltrainieren.", "§7Rechtsklick zum §c§ldeaktivieren/§a§laktivieren", "", "§7Coins: §e" + entry.getValue().getMinTrainingCoins(player)).build());
                 else {
                     if(!HeroCraft.getPlugin().getSkillManager().isSkillsActive(player)) {
                         inventory.setItem(i, new ItemBuilder(Material.POTION).setDisplayName(entry.getValue().getName()).setLore("§7" + entry.getValue().getDescription(), "", "§7Kosten: §e" + entry.getValue().getFirstCosts() + " Coins", "", "§cSkills nicht aktiviert").build());

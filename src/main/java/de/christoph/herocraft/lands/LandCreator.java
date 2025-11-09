@@ -5,7 +5,6 @@ import de.christoph.herocraft.protection.ProtectionListener;
 import de.christoph.herocraft.utils.Constant;
 import dev.lone.itemsadder.api.CustomStack;
 import dev.lone.itemsadder.api.ItemsAdder;
-import net.minecraft.world.item.ItemAir;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -125,7 +124,15 @@ public class LandCreator implements CommandExecutor, Listener {
                         centerZ,
                         0,
                         4500,
-                        new String[]{""}
+                        new String[]{""},
+                        new String[]{""},
+                        0,
+                            0,
+
+                            0,
+                            0,
+                            0,
+                            0
                     );
                     HeroCraft.getPlugin().getLandManager().getAllLands().add(land);
                     HeroCraft.getPlugin().getLandManager().saveLand(land);

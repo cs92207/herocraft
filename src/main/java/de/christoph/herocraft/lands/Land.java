@@ -1,12 +1,7 @@
 package de.christoph.herocraft.lands;
 
 import de.christoph.herocraft.HeroCraft;
-import net.minecraft.world.level.border.WorldBorder;
 import org.bukkit.*;
-import org.bukkit.block.Beacon;
-import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R1.block.CraftBeacon;
-import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -41,8 +36,15 @@ public class Land {
     private double coins;
     private int maxBlocks;
     private String[] trusted;
+    private String[] semiTrusted;
+    private double spawnYaw;
+    private double spawnPitch;
+    private double armeeCoins;
+    private double prisonSpawnX;
+    private double prisonSpawnZ;
+    private double prisonSpawnY;
 
-    public Land(String name, String founderUUID, String founderName, String[] coFounderUUIDs, String[] coFounderNames, String[] memberUUIDs, String[] memberNames, double x1, double z1, double x2, double z2, double spawnX, double spawnY, double spawnZ, double coins, int maxBlocks, String[] trusted) {
+    public Land(String name, String founderUUID, String founderName, String[] coFounderUUIDs, String[] coFounderNames, String[] memberUUIDs, String[] memberNames, double x1, double z1, double x2, double z2, double spawnX, double spawnY, double spawnZ, double coins, int maxBlocks, String[] trusted, String[] semiTrusted, double spawnYaw, double spawnPitch, double armeeCoins, double prisonSpawnX, double prisonSpawnZ, double prisonSpawnY) {
         this.name = name;
         this.founderUUID = founderUUID;
         this.founderName = founderName;
@@ -60,6 +62,13 @@ public class Land {
         this.coins = coins;
         this.maxBlocks = maxBlocks;
         this.trusted = trusted;
+        this.semiTrusted = semiTrusted;
+        this.spawnYaw = spawnYaw;
+        this.spawnPitch = spawnPitch;
+        this.armeeCoins = armeeCoins;
+        this.prisonSpawnX = prisonSpawnX;
+        this.prisonSpawnZ = prisonSpawnZ;
+        this.prisonSpawnY = prisonSpawnY;
     }
 
     public boolean isInLand(Player player) {
@@ -75,6 +84,10 @@ public class Land {
             }
         }
         return false;
+    }
+
+    public Location getPrisonSpawnPoint() {
+        return new Location(Bukkit.getWorld("world"), prisonSpawnX, prisonSpawnY, prisonSpawnZ);
     }
 
     public ArrayList<String> getAllLandNames() {
@@ -101,6 +114,14 @@ public class Land {
             if(i.equalsIgnoreCase(player.getUniqueId().toString())) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    public boolean isSemiTrusted(Player player) {
+        for(String i : semiTrusted) {
+            if(i.equals(player.getUniqueId().toString()))
+                return true;
         }
         return false;
     }
@@ -218,7 +239,7 @@ public class Land {
                         double currentLength = progress * length;
                         Location location = start.clone().add(direction.clone().multiply(currentLength));
                         location.setY(start.getY() + progress * length);
-                        world.spawnParticle(Particle.REDSTONE, location, 1, new Particle.DustOptions(Color.fromRGB(255, 0, 0), 1));
+                        world.spawnParticle(Particle.FIREWORK, location, 1, new Particle.DustOptions(Color.fromRGB(255, 0, 0), 1));
                     }
                 }
 
@@ -235,7 +256,7 @@ public class Land {
 
     public void teleportTo(Player player) {
         player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1, 1);
-        player.teleport(new Location(Bukkit.getWorld("world"), spawnX, spawnY, spawnZ));
+        player.teleport(new Location(Bukkit.getWorld("world"), spawnX, spawnY, spawnZ, (float) spawnYaw, (float) spawnPitch));
     }
 
     public void addMember(Player player) {
@@ -342,6 +363,15 @@ public class Land {
         spawnX = location.getX();
         spawnY = location.getY();
         spawnZ = location.getZ();
+        spawnYaw = location.getYaw();
+        spawnPitch = location.getPitch();
+        HeroCraft.getPlugin().getLandManager().saveLand(this);
+    }
+
+    public void setPrisonSpawnPoint(Location location) {
+        prisonSpawnX = location.getX();
+        prisonSpawnY = location.getY();
+        prisonSpawnZ = location.getZ();
         HeroCraft.getPlugin().getLandManager().saveLand(this);
     }
 
@@ -351,6 +381,18 @@ public class Land {
             preparedStatement.setString(1, name);
             preparedStatement.execute();
             HeroCraft.getPlugin().getLandManager().getAllLands().remove(this);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void setArmeeCoins(double amount) {
+        armeeCoins = amount;
+        try {
+            PreparedStatement preparedStatement = HeroCraft.getPlugin().getMySQL().getConnection().prepareStatement("UPDATE `lands` SET `armee_coins` = ? WHERE `name` = ?");
+            preparedStatement.setDouble(1, amount);
+            preparedStatement.setString(2, name);
+            preparedStatement.execute();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -380,6 +422,21 @@ public class Land {
         }
     }
 
+    public void semiTrustPlayer(Player player) {
+        boolean isTrusted = false;
+        for(String i : semiTrusted) {
+            if(i.equalsIgnoreCase(player.getUniqueId().toString())) {
+                isTrusted = true;
+            }
+        }
+        if(isTrusted)
+            return;
+        List<String> trustedUUIDs = new ArrayList<>(Arrays.asList(semiTrusted));
+        trustedUUIDs.add(player.getUniqueId().toString());
+        semiTrusted = trustedUUIDs.toArray(new String[0]);
+        HeroCraft.getPlugin().getLandManager().saveLand(this);
+    }
+
     public void trustPlayer(Player player) {
         boolean isTrusted = false;
         for(String i : trusted) {
@@ -392,6 +449,21 @@ public class Land {
         List<String> trustedUUIDs = new ArrayList<>(Arrays.asList(trusted));
         trustedUUIDs.add(player.getUniqueId().toString());
         trusted = trustedUUIDs.toArray(new String[0]);
+        HeroCraft.getPlugin().getLandManager().saveLand(this);
+    }
+
+    public void unSemiTrustPlayer(Player player) {
+        boolean isTrusted = false;
+        for(String i : semiTrusted) {
+            if(i.equalsIgnoreCase(player.getUniqueId().toString())) {
+                isTrusted = true;
+            }
+        }
+        if(!isTrusted)
+            return;
+        List<String> trustedUUIDs = new ArrayList<>(Arrays.asList(semiTrusted));
+        trustedUUIDs.remove(player.getUniqueId().toString());
+        semiTrusted = trustedUUIDs.toArray(new String[0]);
         HeroCraft.getPlugin().getLandManager().saveLand(this);
     }
 
@@ -462,6 +534,10 @@ public class Land {
         return coins;
     }
 
+    public double getArmeeCoins() {
+        return armeeCoins;
+    }
+
     public String[] getMemberNames() {
         return memberNames;
     }
@@ -476,6 +552,30 @@ public class Land {
 
     public String[] getTrusted() {
         return trusted;
+    }
+
+    public String[] getSemiTrusted() {
+        return semiTrusted;
+    }
+
+    public double getSpawnYaw() {
+        return spawnYaw;
+    }
+
+    public double getSpawnPitch() {
+        return spawnPitch;
+    }
+
+    public double getPrisonSpawnX() {
+        return prisonSpawnX;
+    }
+
+    public double getPrisonSpawnY() {
+        return prisonSpawnY;
+    }
+
+    public double getPrisonSpawnZ() {
+        return prisonSpawnZ;
     }
 
 }

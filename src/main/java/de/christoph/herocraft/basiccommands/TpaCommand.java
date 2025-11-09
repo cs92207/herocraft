@@ -14,12 +14,15 @@ import java.util.HashMap;
 public class TpaCommand implements CommandExecutor {
 
     public static HashMap<Player, Player> tpaPlayers = new HashMap<>(); // <Angefragter, Sender>
-    private static ArrayList<Player> informedPlayer = new ArrayList<>();
 
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String s, String[] strings) {
         if(commandSender instanceof Player) {
             Player player = (Player) commandSender;
+            if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
+                player.sendMessage(Constant.PREFIX + "§7Das darfst du nicht im Gefängnis. Baue Obsidian ab, oder verlasse dein Land §0(§e/land§0)§7.");
+                return false;
+            }
             if(strings.length == 1) {
                 if(strings[0].equalsIgnoreCase("annehmen") || strings[0].equalsIgnoreCase("accept")) {
                     if(tpaPlayers.containsKey(player)) {
@@ -32,40 +35,24 @@ public class TpaCommand implements CommandExecutor {
                     } else
                         player.sendMessage(Constant.PREFIX + "§7Du hast keine offene §cTeleportations Anfrage§7.");
                 } else {
-                    if(informedPlayer.contains(player)) {
-                        if(HeroCraft.getPlugin().coin.getCoins(player) >= Constant.TPA_PRICE) {
-                            informedPlayer.remove(player);
-                            HeroCraft.getPlugin().coin.removeMoney(player, Constant.TPA_PRICE);
-                            Player target = Bukkit.getPlayer(strings[0]);
-                            if(target != null) {
-                                if(!tpaPlayers.containsKey(target)) {
-                                    player.sendMessage(Constant.PREFIX + "§7Du hast eine Anfrage gestellt. Sie läuft in §e20 Sekunden§7 ab.");
-                                    target.sendMessage(Constant.PREFIX + "§7Der Spieler §e" + player.getName() + "§7 möchte sich zu dir teleportiern. Benutze §e/tpa annehmen §7um dies zu erlauben. Die Anfrage verfällt in §e20 Sekunden§7.");
-                                    tpaPlayers.put(target, player);
-                                    int taskID = Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            tpaPlayers.remove(target);
-                                        }
-                                    }, 20*20);
-                                } else
-                                    player.sendMessage(Constant.PREFIX + "§7Dieser Spieler hat bereits eine §cAnfrage §7bekommen.");
+                        Player target = Bukkit.getPlayer(strings[0]);
+                        if(target != null) {
+                            if(!tpaPlayers.containsKey(target)) {
+                                player.sendMessage(Constant.PREFIX + "§7Du hast eine Anfrage gestellt. Sie läuft in §e120 Sekunden§7 ab.");
+                                target.sendMessage(Constant.PREFIX + "§7Der Spieler §e" + player.getName() + "§7 möchte sich zu dir teleportiern. Benutze §e/tpa annehmen §7um dies zu erlauben. Die Anfrage verfällt in §e20 Sekunden§7.");
+                                tpaPlayers.put(target, player);
+                                int taskID = Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        tpaPlayers.remove(target);
+                                    }
+                                }, 20*120);
                             } else
-                                player.sendMessage(Constant.PLAYER_NOT_ONLINE);
-                        } else {
-                            informedPlayer.remove(player);
-                            player.sendMessage(Constant.PREFIX + "§7Dazu hast du nicht genug §cCoins§7.");
-                        }
-                    } else {
-                        informedPlayer.add(player);
-                        player.sendMessage(Constant.PREFIX + "§7Dies wird dich §a" + Constant.TPA_PRICE + "§7 kosten. Wenn du dies trotzdem tun möchtest, §agebe den Befehl erneut ein§7.");
-                        Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
-                            @Override
-                            public void run() {
-                                informedPlayer.remove(player);
-                            }
-                        }, 20*6);
-                    }
+                                player.sendMessage(Constant.PREFIX + "§7Dieser Spieler hat bereits eine §cAnfrage §7bekommen.");
+                        } else
+                            player.sendMessage(Constant.PLAYER_NOT_ONLINE);
+
+
                 }
             } else
                 player.sendMessage(Constant.PREFIX + "§7Bitte benutze §e/tpa <Spieler> / <annehmen>");

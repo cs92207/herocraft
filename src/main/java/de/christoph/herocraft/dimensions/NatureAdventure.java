@@ -1,27 +1,30 @@
 package de.christoph.herocraft.dimensions;
 
 import de.christoph.herocraft.HeroCraft;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import io.lumine.mythic.api.mobs.MythicMob;
+import io.lumine.mythic.bukkit.BukkitAdapter;
+import io.lumine.mythic.bukkit.MythicBukkit;
+import io.lumine.mythic.core.mobs.ActiveMob;
+import org.bukkit.*;
 import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
-import org.bukkit.entity.Animals;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.player.PlayerBedLeaveEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class NatureAdventure extends Dimension {
 
@@ -149,6 +152,11 @@ public class NatureAdventure extends Dimension {
                     "Erschöpfung",
                     "Ausgewogene Ernährung"
                 },
+                new String[]{
+                    "Geist",
+                    "Zombie Mutant",
+                    "BOSS: Stein Golem"
+                },
                 Material.ROSE_BUSH
             );
     }
@@ -165,9 +173,15 @@ public class NatureAdventure extends Dimension {
     public void onPlayerItemConsume(PlayerItemConsumeEvent event) {
         Material food = event.getItem().getType();
         if (YUMMY_FOODS.contains(food)) {
-            addNiceScala(event.getPlayer(), 2);
+            addNiceScala(event.getPlayer(), 15);
         } else if (UNYUMMY_FOODS.contains(food)) {
-            removeNiceScala(event.getPlayer(), 5);
+            removeNiceScala(event.getPlayer(), 3);
+        }
+
+        if(HEALTHY_FOODS.contains(food)) {
+            addFoodScala(event.getPlayer(), 15);
+        } else if(UNHEALTHY_FOODS.contains(food)) {
+            removeFoodScala(event.getPlayer(), 15);
         }
     }
 
@@ -175,7 +189,14 @@ public class NatureAdventure extends Dimension {
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if(!(event.getEntity() instanceof Player))
             return;
-        removeNiceScala((Player) event.getEntity(), 2);
+        removeNiceScala((Player) event.getEntity(), 1);
+    }
+
+    @EventHandler
+    public void onPlayerSleep(PlayerBedLeaveEvent event) {
+        if(tiredScala.containsKey(event.getPlayer())) {
+            tiredScala.put(event.getPlayer(), 100);
+        }
     }
 
     @EventHandler
@@ -214,39 +235,69 @@ public class NatureAdventure extends Dimension {
         setBossBarsForPlayer(player);
     }
 
+    private void addFoodScala(Player player, int amount) {
+        if(foodScala.containsKey(player)) {
+            if(amount < 100) {
+                if((foodScala.get(player) + amount) < 100)
+                    foodScala.put(player, foodScala.get(player) + amount);
+                else
+                    foodScala.put(player, 100);
+            }
+        }
+    }
+
+    private void removeFoodScala(Player player, int amount) {
+        if(foodScala.containsKey(player)) {
+            if(amount > 0) {
+                if(foodScala.get(player) > amount)
+                    foodScala.put(player, foodScala.get(player) - amount);
+                else
+                    foodScala.put(player, 0);
+            }
+        }
+    }
+
     private void addNiceScala(Player player, int amount) {
         if(niceScala.containsKey(player)) {
             if(amount < 100) {
-                niceScala.put(player, niceScala.get(player) + amount);
+                if((niceScala.get(player) + amount) < 100)
+                    niceScala.put(player, niceScala.get(player) + amount);
+                else
+                    niceScala.put(player, 100);
             }
-            setBossBarsForPlayer(player);
         }
     }
 
     private void addTiredScala(Player player, int amount) {
         if(tiredScala.containsKey(player)) {
             if(amount < 100) {
-                tiredScala.put(player, tiredScala.get(player) + amount);
+                if(tiredScala.get(player) > amount)
+                    tiredScala.put(player, tiredScala.get(player) - amount);
+                else
+                    tiredScala.put(player, 0);
             }
-            setBossBarsForPlayer(player);
         }
     }
 
     private void removeNiceScala(Player player, int amount) {
         if(niceScala.containsKey(player)) {
             if(amount > 0) {
-                niceScala.put(player, niceScala.get(player) - amount);
+                if(niceScala.get(player) > amount)
+                    niceScala.put(player, niceScala.get(player) - amount);
+                else
+                    niceScala.put(player, 0);
             }
-            setBossBarsForPlayer(player);
         }
     }
 
     private void removeTiredScala(Player player, int amount) {
         if(tiredScala.containsKey(player)) {
             if(amount > 0) {
-                tiredScala.put(player, tiredScala.get(player) - amount);
+                if(tiredScala.get(player) > amount)
+                    tiredScala.put(player, tiredScala.get(player) - amount);
+                else
+                    tiredScala.put(player, 0);
             }
-            setBossBarsForPlayer(player);
         }
     }
 
@@ -258,6 +309,14 @@ public class NatureAdventure extends Dimension {
                // continue;
             checkForNice(player);
             checkForTired(player);
+            setBossBarsForPlayer(player);
+        }
+    }
+
+    @Override
+    public void onScoreboardTick() {
+        for(Player player : getDimensionPlayers()) {
+            setBossBarsForPlayer(player);
         }
     }
 
@@ -268,7 +327,7 @@ public class NatureAdventure extends Dimension {
         }
         if(player.isSprinting()) {
             if(!isPlayerRiding(player))
-                removeNiceScala(player, 2);
+                removeNiceScala(player, 1);
         }
         if(player.isSwimming()) {
             removeTiredScala(player, 2);
@@ -277,7 +336,7 @@ public class NatureAdventure extends Dimension {
             removeTiredScala(player, 8);
         }
         if(isPlayerRiding(player)) {
-            addNiceScala(player, 1);
+            addNiceScala(player, 5);
         }
     }
 
@@ -289,13 +348,13 @@ public class NatureAdventure extends Dimension {
         if(UNNICE_BLOCKS.contains(player.getLocation().getBlock().getType())) {
             removeNiceScala(player, 1);
         } else if(NICE_BLOCKS.contains(player.getLocation().getBlock().getType())) {
-            addNiceScala(player, 1);
+            addNiceScala(player, 12);
         }
         for(Entity i : player.getLocation().getWorld().getNearbyEntities(player.getLocation(), 5, 5, 5)) {
             if(i instanceof Monster) {
-                removeNiceScala(player, 5);
+                removeNiceScala(player, 1);
             } else if(i instanceof Animals) {
-                addNiceScala(player, 2);
+                addNiceScala(player, 12);
             }
         }
         if(isInDarkEnvironment(player)) {
@@ -303,13 +362,13 @@ public class NatureAdventure extends Dimension {
         }
         if(player.isSprinting()) {
             if(!isPlayerRiding(player))
-                removeNiceScala(player, 2);
+                removeNiceScala(player, 1);
         }
         if(isPlayerRiding(player)) {
-            addNiceScala(player, 1);
+            addNiceScala(player, 8);
         }
         if(player.isSwimming()) {
-            addNiceScala(player, 1);
+            addNiceScala(player, 8);
         }
     }
 
@@ -355,31 +414,31 @@ public class NatureAdventure extends Dimension {
             }
             nice = "§cWohlfühl Skala";
             player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 20*60*3, 3));
-            player.removePotionEffect(PotionEffectType.INCREASE_DAMAGE);
+            player.removePotionEffect(PotionEffectType.STRENGTH);
         } else if(niceScala.get(player) >= 90) {
             nice = "§aWohlfühl Skala";
-            player.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 20*60*3, 3));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 20*60*3, 3));
             player.removePotionEffect(PotionEffectType.WEAKNESS);
         } else {
             nice = "§7Wohlfühl Skala";
             player.removePotionEffect(PotionEffectType.WEAKNESS);
-            player.removePotionEffect(PotionEffectType.INCREASE_DAMAGE);
+            player.removePotionEffect(PotionEffectType.STRENGTH);
         }
         if(tiredScala.get(player) < 20) {
             if(tiredScala.get(player) <= 5) {
                 player.damage(6);
             }
             tired = "§cErschöpfung";
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 20*60*3, 3));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20*60*3, 3));
             player.removePotionEffect(PotionEffectType.SPEED);
         } else if(tiredScala.get(player) >= 90) {
             tired = "§aErschöpfung";
             player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 20*60*3, 3));
-            player.removePotionEffect(PotionEffectType.SLOW);
+            player.removePotionEffect(PotionEffectType.SLOWNESS);
         } else {
             tired = "§7Erschöpfung";
             player.removePotionEffect(PotionEffectType.SPEED);
-            player.removePotionEffect(PotionEffectType.SLOW);
+            player.removePotionEffect(PotionEffectType.SLOWNESS);
         }
         if(foodScala.get(player) < 20) {
             if(foodScala.get(player) <= 5) {
@@ -402,14 +461,131 @@ public class NatureAdventure extends Dimension {
 
     @Override
     public void onDimensionLeaved(Player player) {
-        niceScala.remove(player);
-        tiredScala.remove(player);
-        foodScala.remove(player);
-        blocksPlayers.remove(player);
         HeroCraft.getPlugin().getConfig().set("NatureAdventure.Nice." + player.getUniqueId().toString(), niceScala.get(player));
         HeroCraft.getPlugin().getConfig().set("NatureAdventure.Tired." + player.getUniqueId().toString(), tiredScala.get(player));
         HeroCraft.getPlugin().getConfig().set("NatureAdventure.Food." + player.getUniqueId().toString(), foodScala.get(player));
         HeroCraft.getPlugin().saveConfig();
+        niceScala.remove(player);
+        tiredScala.remove(player);
+        foodScala.remove(player);
+        blocksPlayers.remove(player);
+    }
+
+    @EventHandler
+    public void onCustomMobsDrop(EntityDeathEvent event) {
+        Entity entity = event.getEntity();
+        Optional<ActiveMob> optActiveMob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId());
+        optActiveMob.ifPresent(activeMob -> {
+            if(activeMob.getName().equalsIgnoreCase("§fForestMonster")) {
+                int random = new Random().nextInt(10);
+                if(random >= 5) {
+                    entity.getLocation().getWorld().dropItemNaturally(entity.getLocation(), HeroCraft.getItemsAdderItem("§4§lWald Ei"));
+                } else {
+                    entity.getLocation().getWorld().dropItemNaturally(entity.getLocation(), new ItemStack(Material.OAK_SAPLING));
+                }
+            } else if(activeMob.getName().equalsIgnoreCase("§fGeist")) {
+                entity.getLocation().getWorld().dropItemNaturally(entity.getLocation(), new ItemStack(Material.PHANTOM_MEMBRANE));
+            } else if(activeMob.getName().equalsIgnoreCase("§fStoneGolem")) {
+                entity.getLocation().getWorld().dropItemNaturally(entity.getLocation(), HeroCraft.getItemsAdderItem("§4§lDark Crystal"));
+            }
+        });
+    }
+
+    @EventHandler
+    public void onStoneGolemRitual(PlayerDropItemEvent event) {
+        Item item = event.getItemDrop();
+        new BukkitRunnable(){
+            private int duration = 100;
+            @Override
+            public void run(){
+                if (duration > 0 && item.isValid()){
+                    if (item.getLocation().getBlock().getType() == Material.WATER_CAULDRON){
+                        Block block = item.getLocation().getBlock();
+                        Player player = event.getPlayer();
+                        if (block.getType() != Material.WATER_CAULDRON) {
+                            return;
+                        }
+                        if(!item.getItemStack().hasItemMeta())
+                            return;
+                        if(!item.getItemStack().getItemMeta().hasDisplayName())
+                            return;
+                        if(!item.getItemStack().getItemMeta().getDisplayName().equalsIgnoreCase("§4§lWald Ei"))
+                            return;
+                        if(!player.getWorld().getBlockAt(block.getLocation().add(0, -1, 0)).getType().equals(Material.DIAMOND_BLOCK))
+                            return;
+                        if(!player.getWorld().getBlockAt(block.getLocation().add(1, -1, 0)).getType().equals(Material.COBBLESTONE))
+                            return;
+                        if(!player.getWorld().getBlockAt(block.getLocation().add(-1, -1, 0)).getType().equals(Material.COBBLESTONE))
+                            return;
+                        if(!player.getWorld().getBlockAt(block.getLocation().add(0, -1, 1)).getType().equals(Material.COBBLESTONE))
+                            return;
+                        if(!player.getWorld().getBlockAt(block.getLocation().add(0, -1, -1)).getType().equals(Material.COBBLESTONE))
+                            return;
+                        item.remove();
+                        spawnCauldronParticles(block.getLocation(), Particle.LARGE_SMOKE, 20);
+                        Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
+                            @Override
+                            public void run() {
+                                spawnCauldronParticles(block.getLocation(), Particle.LARGE_SMOKE, 20);
+                            }
+                        }, 20);
+                        Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
+                            @Override
+                            public void run() {
+                                spawnCauldronParticles(block.getLocation(), Particle.LARGE_SMOKE, 20);
+                            }
+                        }, 20*2);
+                        Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
+                            @Override
+                            public void run() {
+                                player.getWorld().getBlockAt(block.getLocation().add(0, -1, 0)).setType(Material.STONE);
+                                player.getWorld().strikeLightning(block.getLocation());
+                                MythicMob mob = MythicBukkit.inst().getMobManager().getMythicMob("stonegolem").orElse(null);
+                                mob.spawn(BukkitAdapter.adapt(block.getLocation().add(0, 10, 0)),1);
+                                Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        MythicMob mob1 = MythicBukkit.inst().getMobManager().getMythicMob("geist").orElse(null);
+                                        mob1.spawn(BukkitAdapter.adapt(player.getLocation().add(0, 5, 0)),1);
+                                        mob1.spawn(BukkitAdapter.adapt(player.getLocation().add(0, 5, 0)),1);
+                                        mob1.spawn(BukkitAdapter.adapt(player.getLocation().add(0, 5, 0)),1);
+                                        mob1.spawn(BukkitAdapter.adapt(player.getLocation().add(0, 5, 0)),1);
+                                        mob1.spawn(BukkitAdapter.adapt(player.getLocation().add(0, 5, 0)),1);
+                                        player.getWorld().strikeLightning(player.getLocation());
+                                    }
+                                }, 20*4);
+                            }
+                        }, 20*3);
+                        cancel();
+                    }
+                    duration--;
+                } else {
+                    cancel();
+                }
+            }
+        }.runTaskTimer(HeroCraft.getPlugin(), 1L, 1L);
+    }
+
+    @EventHandler
+    public void onBossDamageCauseFireAspect(EntityDamageEvent event) {
+        if(!event.getCause().equals(EntityDamageEvent.DamageCause.FIRE_TICK) && !event.getCause().equals(EntityDamageEvent.DamageCause.FIRE) && !event.getCause().equals(EntityDamageEvent.DamageCause.FALL))
+            return;
+        Entity entity = event.getEntity();
+        Optional<ActiveMob> optActiveMob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId());
+        optActiveMob.ifPresent(activeMob -> {
+            if(activeMob.getName().equalsIgnoreCase("§fStoneGolem")) {
+                event.setCancelled(true);
+            }
+        });
+    }
+
+    public void spawnCauldronParticles(Location cauldronLocation, Particle particleType, int count) {
+        World world = cauldronLocation.getWorld();
+        if (world == null) return;
+        double x = cauldronLocation.getX() + 0.5;
+        double y = cauldronLocation.getY() + 1.0;
+        double z = cauldronLocation.getZ() + 0.5;
+        world.spawnParticle(particleType, x, y, z, count, 0.3, 0.3, 0.3, 0.01);
     }
 
 

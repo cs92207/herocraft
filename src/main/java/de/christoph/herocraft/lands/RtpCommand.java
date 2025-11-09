@@ -2,7 +2,6 @@ package de.christoph.herocraft.lands;
 
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.utils.Constant;
-import net.minecraft.world.level.levelgen.placement.HeightRangePlacement;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -22,6 +21,10 @@ public class RtpCommand implements CommandExecutor {
         if(!(commandSender instanceof Player))
             return false;
         Player player = (Player) commandSender;
+        if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
+            player.sendMessage(Constant.PREFIX + "§7Das darfst du nicht im Gefängnis. Baue Obsidian ab, oder verlasse dein Land §0(§e/land§0)§7.");
+            return false;
+        }
         if(!strings[0].equalsIgnoreCase("1288"))
             return false;
         if(cooldownPlayers.contains(player)) {

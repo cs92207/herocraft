@@ -19,11 +19,11 @@ import org.bukkit.potion.PotionEffectType;
 public class Invisible extends ActiveSkill implements Listener {
 
     public Invisible() {
-        super("§4§lUnsichtbarkeit", "Sneake und Rechtsklicke in auf einen Block, um Unsichtbar zu werden", 500, new Location(Bukkit.getWorld("hero"), -663, 67, -269, 178.9F, 0.9F), "§7Werde Unsichtbar hinter den Bannern.", 70);
+        super("§4§lUnsichtbarkeit", "Sneake und Rechtsklicke in auf einen Block, um Unsichtbar zu werden", 500, new Location(Bukkit.getWorld("world"), 60, 83, -148), "§7Werde Unsichtbar hinter den Bannern.", 70);
         Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
             @Override
             public void run() {
-                trainingLocation = new Location(Bukkit.getWorld("hero"), -663, 67, -269, 178.9F, 0.9F);
+                trainingLocation = new Location(Bukkit.getWorld("world"), 60, 83, -148);
             }
         }, 20*2);
     }
@@ -52,7 +52,8 @@ public class Invisible extends ActiveSkill implements Listener {
             return;
         if(block.getType() != Material.RED_CONCRETE)
             return;
-        leaveTraining(event.getPlayer());
+        if(ProtectionListener.isInDangerZone(block.getLocation()))
+            leaveTraining(event.getPlayer());
     }
 
     @EventHandler

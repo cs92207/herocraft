@@ -1,16 +1,25 @@
 package de.christoph.herocraft;
 
 import de.christoph.herocraft.afksystem.AdminAFK;
+import de.christoph.herocraft.allthemobs.AllTheMobsManager;
+import de.christoph.herocraft.allthemobs.GetPointsFromLand;
+import de.christoph.herocraft.allthemobs.LandMobsCommand;
+import de.christoph.herocraft.allthemobs.MobListCommand;
 import de.christoph.herocraft.armee.ResearchResultCommand;
 import de.christoph.herocraft.armee.SuperheroManager;
 import de.christoph.herocraft.basiccommands.*;
 import de.christoph.herocraft.birthday.BirthdayCommand;
+import de.christoph.herocraft.booster.BoosterManager;
 import de.christoph.herocraft.caseopening.CaseOpeningListener;
 import de.christoph.herocraft.caseopening.SetCaseOpeningCommand;
-import de.christoph.herocraft.challenges.ChallengeManager;
-import de.christoph.herocraft.challenges.ChangeChallengeCommand;
+import de.christoph.herocraft.challenges.Commands;
+import de.christoph.herocraft.challenges.config.Aufgabe;
+import de.christoph.herocraft.challenges.config.CreateConfigs;
+import de.christoph.herocraft.challenges.gui.CreateGui;
+import de.christoph.herocraft.challenges.gui.GuiListener;
 import de.christoph.herocraft.dimensions.DimensionCommand;
 import de.christoph.herocraft.dimensions.DimensionManager;
+import de.christoph.herocraft.dimensions.DimensionStorage;
 import de.christoph.herocraft.dungeons.DungeonManager;
 import de.christoph.herocraft.economy.Coin;
 import de.christoph.herocraft.economy.CoinCommand;
@@ -22,33 +31,45 @@ import de.christoph.herocraft.landpresentation.LandPresentationManager;
 import de.christoph.herocraft.landpresentation.SetPresentationHoloLocationCommand;
 import de.christoph.herocraft.landpresentation.VoteForLandCommand;
 import de.christoph.herocraft.lands.*;
+import de.christoph.herocraft.lands.armee.ArmeeManager;
 import de.christoph.herocraft.lands.province.CityBlock;
 import de.christoph.herocraft.lands.province.ProvinceManager;
 import de.christoph.herocraft.lands.province.TownHall;
+import de.christoph.herocraft.lands.roles.LandRoleManager;
 import de.christoph.herocraft.market.*;
 import de.christoph.herocraft.market.herokea.HeroKeaListener;
+import de.christoph.herocraft.markethall.*;
 import de.christoph.herocraft.mysql.MySQL;
+import de.christoph.herocraft.prison.PrisonCommand;
+import de.christoph.herocraft.prison.PrisonManager;
+import de.christoph.herocraft.prison.SetPrisonSpawnPointCommand;
 import de.christoph.herocraft.protection.ProtectionListener;
 import de.christoph.herocraft.protection.SneakChallenge;
+import de.christoph.herocraft.quests.DailyQuest;
+import de.christoph.herocraft.raids.*;
 import de.christoph.herocraft.school.MentorCommand;
 import de.christoph.herocraft.school.MentorListener;
 import de.christoph.herocraft.school.skills.SkillManager;
 import de.christoph.herocraft.specialitems.*;
-import de.christoph.herocraft.status.Status;
 import de.christoph.herocraft.teleporter.Teleporter;
 import de.christoph.herocraft.tutorial.*;
 import de.christoph.herocraft.voteday.StartVoteDayCommand;
 import de.christoph.herocraft.voteday.VoteDayManager;
+import de.christoph.herocraft.voteday.VoteDayNoCommand;
 import de.christoph.herocraft.voteday.VoteDayYesCommand;
+import dev.lone.itemsadder.api.CustomStack;
+import dev.lone.itemsadder.api.ItemsAdder;
 import org.bukkit.Bukkit;
-import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.checkerframework.checker.units.qual.C;
+
+import java.util.*;
 
 public final class HeroCraft extends JavaPlugin {
 
     private static HeroCraft plugin;
-    private ChallengeManager challengeManager;
     public Coin coin;
     private MySQL mySQL;
     private MySQL shopMySQL;
@@ -62,30 +83,69 @@ public final class HeroCraft extends JavaPlugin {
     private DungeonManager dungeonManager;
     private LandPresentationManager landPresentationManager;
     private ProvinceManager provinceManager;
-    // private DimensionManager dimensionManager;
+    private BoosterManager boosterManager;
+    private DimensionManager dimensionManager;
+
+    public static Commands openGUICommand;
+    public static CreateGui createGUI;
+    public static List<Aufgabe> dailyAufgaben = new ArrayList<>();
+    public static GuiListener guiListener;
+    public static CreateConfigs createConfig;
+    public static List<Aufgabe> allTimeAufgaben = new ArrayList<>();
+    private Map<UUID, UUID> replyMap = new HashMap<>();
+    public LandTagManager landTagManager;
+    public LandRoleManager landRoleManager;
+    public ArmeeManager armeeManager;
+
+    public RaidManager raidManager;
+    public DailyQuest dailyQuest;
+
+    public PrisonManager prisonManager;
 
     @Override
     public void onEnable() {
         plugin = this;
-        mySQL = new MySQL("45.135.201.157", 3306, "herocraft", "SV-Studios", "1Emanuel0602#");
-        shopMySQL = new MySQL("45.135.201.157", 3306, "shop", "SV-Studios", "1Emanuel0602#");
+        mySQL = new MySQL("144.76.83.19", 3306, "herocraft", "SV-Studios", "1Emanuel0602#");
+        shopMySQL = new MySQL("144.76.83.19", 3306, "shop", "SV-Studios", "1Emanuel0602#");
         coin = new Coin();
         auctioneers = new Auctioneers();
         landManager = new LandManager();
-        challengeManager = new ChallengeManager();
         voteDayManager = new VoteDayManager();
         skillManager = new SkillManager();
         homeManager = new HomeManager();
         dungeonManager = new DungeonManager();
         provinceManager = new ProvinceManager();
+        boosterManager = new BoosterManager();
+        landTagManager = new LandTagManager();
+        landRoleManager = new LandRoleManager();
+        armeeManager = new ArmeeManager();
+        raidManager = new RaidManager();
+        dailyQuest = new DailyQuest();
+        prisonManager = new PrisonManager();
+        Bukkit.getPluginManager().registerEvents(prisonManager, this);
+        getCommand("taeglichequest").setExecutor(dailyQuest);
+        Bukkit.getPluginManager().registerEvents(dailyQuest, this);
+        getCommand("killalltroops").setExecutor(new KillAllTroopsCommand());
+        Bukkit.getPluginManager().registerEvents(raidManager, this);
+        getCommand("provocateraid").setExecutor(new ProvocateRaidCommand());
+        MobListCommand mobListCommand = new MobListCommand();
+        LandMobsCommand landMobsCommand = new LandMobsCommand();
+        getCommand("landmobs").setExecutor(landMobsCommand);
+        getCommand("moblist").setExecutor(mobListCommand);
+        getCommand("landpunkte").setExecutor(new GetPointsFromLand());
+        getCommand("endraid").setExecutor(new EndRaid());
+        Bukkit.getPluginManager().registerEvents(landMobsCommand, this);
+        Bukkit.getPluginManager().registerEvents(mobListCommand, this);
+        Bukkit.getPluginManager().registerEvents(new AllTheMobsManager(), this);
+        Bukkit.getPluginManager().registerEvents(armeeManager, this);
+        Bukkit.getPluginManager().registerEvents(landRoleManager, this);
+        Bukkit.getPluginManager().registerEvents(landTagManager, this);
         Bukkit.getPluginManager().registerEvents(landManager, this);
         Bukkit.getPluginManager().registerEvents(provinceManager, this);
         Bukkit.getPluginManager().registerEvents(homeManager, this);
-        Status status = new Status();
-        Bukkit.getPluginManager().registerEvents(status, this);
-        getCommand("status").setExecutor(status);
         Bukkit.getPluginManager().registerEvents(new ProtectionListener(), this);
-        getCommand("changechallenge").setExecutor(new ChangeChallengeCommand());
+        getCommand("landtag").setExecutor(new LandTagCommand());
+        getCommand("tagfarbe").setExecutor(new TagColorCommand());
         getCommand("setpresentationholo").setExecutor(new SetPresentationHoloLocationCommand());
         getCommand("coins").setExecutor(new CoinCommand());
         getCommand("befehle").setExecutor(new CommandsCommand());
@@ -106,11 +166,6 @@ public final class HeroCraft extends JavaPlugin {
         getCommand("signieren").setExecutor(new SignCommand());
         getCommand("tpa").setExecutor(new TpaCommand());
         getCommand("vanish").setExecutor(new VanishCommand());
-        getCommand("ruestungsschmied").setExecutor(new ArmoursmithCommand());
-        getCommand("schlachter").setExecutor(new ButcherCommand());
-        getCommand("fischer").setExecutor(new FisherCommand());
-        getCommand("bergarbeiter").setExecutor(new MinerCommand());
-        getCommand("holzfaeller").setExecutor(new WoodCommand());
         getCommand("auktionshaus").setExecutor(new AuctioneersCommand());
         getCommand("moebelhaus").setExecutor(new FurnitureCommand());
         getCommand("landeinladungannehmen").setExecutor(new LandInvitationAcceptCommand());
@@ -126,11 +181,15 @@ public final class HeroCraft extends JavaPlugin {
         SneakChallenge sneakChallenge = new SneakChallenge();
         Bukkit.getPluginManager().registerEvents(sneakChallenge, this);
         getCommand("sprung").setExecutor(new SneakChallenge());
-        getCommand("dekorationsshop").setExecutor(new DecorationShopCommand());
         getCommand("forschungsergebnis").setExecutor(new ResearchResultCommand());
         getCommand("startvoteday").setExecutor(new StartVoteDayCommand());
         getCommand("tagja").setExecutor(new VoteDayYesCommand());
-        getCommand("tagnein").setExecutor(new VoteDayYesCommand());
+        getCommand("tagnein").setExecutor(new VoteDayNoCommand());
+        getCommand("booster").setExecutor(boosterManager);
+
+        getCommand("message").setExecutor(new MsgCommand(replyMap));
+        getCommand("reply").setExecutor(new ReplyCommand(replyMap));
+        Bukkit.getPluginManager().registerEvents(boosterManager, this);
         Bukkit.getPluginManager().registerEvents(new CaptainAmericaShield(), this);
         Bukkit.getPluginManager().registerEvents(new MainListener(), this);
         Bukkit.getPluginManager().registerEvents(new MarketCommand(), this);
@@ -141,24 +200,20 @@ public final class HeroCraft extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new NetShooter(), this);
         Bukkit.getPluginManager().registerEvents(new Pistol(), this);
         Bukkit.getPluginManager().registerEvents(new Wolverine(), this);
-        Bukkit.getPluginManager().registerEvents(new ArmoursmithListener(), this);
-        Bukkit.getPluginManager().registerEvents(new ButcherListener(), this);
-        Bukkit.getPluginManager().registerEvents(new FisherListener(), this);
-        Bukkit.getPluginManager().registerEvents(new MinerListener(), this);
-        Bukkit.getPluginManager().registerEvents(new WoodListener(), this);
         Bukkit.getPluginManager().registerEvents(new Goverment(), this);
         Bukkit.getPluginManager().registerEvents(new TownHall(), this);
         Bukkit.getPluginManager().registerEvents(new CityBlock(), this);
         Bukkit.getPluginManager().registerEvents(auctioneers, this);
         Bukkit.getPluginManager().registerEvents(landManager, this);
         Bukkit.getPluginManager().registerEvents(new FurnitureListener(), this);
-        Bukkit.getPluginManager().registerEvents(new DecorationShopListener(), this);
         Bukkit.getPluginManager().registerEvents(new TutorialListener(), this);
         Bukkit.getPluginManager().registerEvents(new HeroKeaListener(), this);
         Bukkit.getPluginManager().registerEvents(new CaseOpeningListener(), this);
 
         getCommand("trust").setExecutor(new TrustCommand());
+        getCommand("semitrust").setExecutor(new SemiTrustCommand());
         getCommand("untrust").setExecutor(new UntrustCommand());
+        getCommand("semiuntrust").setExecutor(new SemiUnTrustCommand());
 
         BirthdayCommand birthdayCommand = new BirthdayCommand();
         getCommand("birthday").setExecutor(birthdayCommand);
@@ -187,29 +242,83 @@ public final class HeroCraft extends JavaPlugin {
         getCommand("landvote").setExecutor(new VoteForLandCommand());
         getCommand("versicherungen").setExecutor(insuranceGui);
         Bukkit.getPluginManager().registerEvents(insuranceGui, this);
-        //getCommand("dimensions").setExecutor(new DimensionCommand());
+        initChallenges();
+        getCommand("dimensions").setExecutor(new DimensionCommand());
+        Bukkit.getPluginManager().registerEvents(new DarkStick(this), this);
+        Bukkit.getPluginManager().registerEvents(new NatureSword(), this);
+        Bukkit.getPluginManager().registerEvents(new Sandstorm(), this);
+        DimensionStorage dimensionStorage = new DimensionStorage();
+        getCommand("dimensionstorage").setExecutor(dimensionStorage);
+        Bukkit.getPluginManager().registerEvents(dimensionStorage, this);
+        TutorialVideo tutorialVideo = new TutorialVideo();
+        getCommand("createtutorialvideo").setExecutor(tutorialVideo);
+        Bukkit.getPluginManager().registerEvents(tutorialVideo, this);
+        getCommand("createcity").setExecutor(new CreateCityCommand());
+        Bukkit.getPluginManager().registerEvents(new SpecialItemsListener(), this);
+        getCommand("besondereitems").setExecutor(new SpecialItemsCommand());
+        Bukkit.getPluginManager().registerEvents(new DuckStick(), this);
+        getCommand("prison").setExecutor(new PrisonCommand());
+        getCommand("freeprison").setExecutor(new FreePrisonCommand());
+        getCommand("setprisonspawn").setExecutor(new SetPrisonSpawnPointCommand());
+        getCommand("farmwelt").setExecutor(new FarmworldCommand());
+
+        Bukkit.getPluginManager().registerEvents(new ScaleStick(), this);
+
+
+        new FishMarketShop();
+        new WoodMarketShop();
+        new MinerMarketShop();
+        new ButcherMarketShop();
+        new ArmorerMarketShop();
+        new MonsterDropMarketShop();
+        new AnimalMarketShop();
+        new FloristMarketShop();
+
         Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
             @Override
             public void run() {
-                superheroManager = new SuperheroManager();
+                /*superheroManager = new SuperheroManager();
                 Bukkit.getPluginManager().registerEvents(superheroManager, HeroCraft.getPlugin());
                 landPresentationManager = new LandPresentationManager();
-                Bukkit.getPluginManager().registerEvents(landPresentationManager, plugin);
-                //dimensionManager = new DimensionManager();
-                //Bukkit.getPluginManager().registerEvents(dimensionManager, plugin);
+                Bukkit.getPluginManager().registerEvents(landPresentationManager, plugin);*/
+                dimensionManager = new DimensionManager();
+                Bukkit.getPluginManager().registerEvents(dimensionManager, plugin);
             }
         }, 20*2);
     }
 
-    @Override
-    public void onDisable() {
-        landPresentationManager.richestHolo.delete();
-        landPresentationManager.bestHolo.delete();
-        //Bukkit.getScheduler().cancelTask(dimensionManager.getTaskID());
+
+    public static ItemStack getItemsAdderItem(String itemName) {
+        ItemStack itemStack = null;
+        for(CustomStack i : ItemsAdder.getAllItems()) {
+            if(i.getDisplayName().equalsIgnoreCase(itemName)) {
+                itemStack = i.getItemStack();
+            }
+        }
+        return itemStack;
     }
 
-    public ChallengeManager getChallengeManager() {
-        return challengeManager;
+    public void initChallenges() {
+        saveConfig();
+        openGUICommand = new Commands();
+        createGUI = new CreateGui();
+        guiListener = new GuiListener();
+        createConfig = new CreateConfigs();
+        getCommand("challenge").setExecutor(openGUICommand);
+        Bukkit.getPluginManager().registerEvents((Listener)guiListener, (Plugin)this);
+        openGUICommand.reloadConfig(null);
+    }
+
+    @Override
+    public void onDisable() {
+        for(Raid i : raidManager.getRaids()) {
+            i.killAllRaidEntities();
+            i.finishRaidFailed();
+        }
+        landPresentationManager.richestHolo.delete();
+        landPresentationManager.bestHolo.delete();
+        Bukkit.getScheduler().cancelTask(dimensionManager.getTaskID());
+        Bukkit.getScheduler().cancelTask(dimensionManager.getTaskID2());
     }
 
     public static HeroCraft getPlugin() {
@@ -229,9 +338,9 @@ public final class HeroCraft extends JavaPlugin {
         return landManager;
     }
 
-    //public DimensionManager getDimensionManager() {
-        //return dimensionManager;
-    //}
+    public DimensionManager getDimensionManager() {
+        return dimensionManager;
+    }
 
     public SuperheroManager getSuperheroManager() {
         return superheroManager;

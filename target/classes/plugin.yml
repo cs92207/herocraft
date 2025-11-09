@@ -2,10 +2,34 @@ name: HeroCraft
 version: '1.0-SNAPSHOT'
 main: de.christoph.herocraft.HeroCraft
 api-version: '1.20'
+depends: 'EntitySize'
 
 commands:
+  setprisonspawn:
+  freeprison:
+  prison:
+  farmwelt:
+    aliases:
+      - farmworld
+  landmobs:
+  provocateraid:
+  landpunkte:
+  moblist:
+  semitrust:
+  semiuntrust:
+  dimensionstorage:
+    aliases:
+      - storage
+      - kiste
+      - dimensionkiste
+  createtutorialvideo:
+  createcity:
+  challenge:
+  landtag:
+  tagfarbe:
+  floristmarket:
+  besondereitems:
   birthday:
-  changechallenge:
   coins:
     aliases:
       - coin
@@ -54,10 +78,16 @@ commands:
       - v
   sprung:
   adminafk:
-  #dimensions:
+  dimensions:
   home:
-  ruestungsschmied:
-  schlachter:
+  message:
+    aliases:
+      - msg
+      - nachricht
+  reply:
+    aliases:
+      - antwort
+      - r
   rtp:
   teleporter:
     aliases:
@@ -67,15 +97,15 @@ commands:
       - teleportieren
       - navigator
       - navigation
-  fischer:
-  bergarbeiter:
   setcasewinnings:
   trust:
   untrust:
+  endraid:
+  killalltroops:
+  taeglichequest:
   createlandfast:
   setpresentationholo:
   landvote:
-  holzfaeller:
   auktionshaus:
   createland:
     aliases:
@@ -86,7 +116,6 @@ commands:
   moebelhaus:
   landeinladungannehmen:
   landeinladungablehnen:
-  dekorationsshop:
   tutorialnpc:
   tutorialnein:
   starttutorial:
@@ -101,3 +130,11 @@ commands:
   tagnein:
   mentor:
   status:
+  booster:
+  fishmarket:
+  woodmarket:
+  minermarket:
+  butchermarket:
+  armorermarket:
+  monsterdrops:
+  animaldrops:

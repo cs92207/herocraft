@@ -22,11 +22,11 @@ public class Magic extends ActiveSkill implements Listener {
     private ArrayList<Player> magicedPlayers = new ArrayList<>();
 
     public Magic() {
-        super("§4§lHexerei", "Klicke Gegner an und verhexe sie", 1000, new Location(Bukkit.getWorld("hero"), -655, 67, -269, 177.5F, 1.3F), "§7Studiere das Zauberbuch", 200);
+        super("§4§lHexerei", "Klicke Gegner an und verhexe sie", 1000, new Location(Bukkit.getWorld("world"), 67, 83, -148), "§7Studiere das Zauberbuch", 200);
         Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
             @Override
             public void run() {
-                trainingLocation = new Location(Bukkit.getWorld("hero"), -655, 67, -279, 177.5F, 1.3F);
+                trainingLocation = new Location(Bukkit.getWorld("world"), 67, 83, -148);
             }
         }, 20*2);
     }
@@ -45,7 +45,8 @@ public class Magic extends ActiveSkill implements Listener {
             return;
         if(block.getType() != Material.RED_CONCRETE)
             return;
-        leaveTraining(event.getPlayer());
+        if(ProtectionListener.isInDangerZone(block.getLocation()))
+            leaveTraining(event.getPlayer());
     }
 
     @EventHandler
@@ -93,7 +94,7 @@ public class Magic extends ActiveSkill implements Listener {
             return;
         magicedPlayers.add(clicked);
         clicked.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 300, 500));
-        clicked.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 300, 500));
+        clicked.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 300, 500));
         for(int i = 0; i < 400; i++)
             clicked.getLocation().getWorld().playEffect(new Location(clicked.getWorld(), clicked.getLocation().getX(), clicked.getLocation().getY() + 2, clicked.getLocation().getZ()), Effect.REDSTONE_TORCH_BURNOUT, 5);
         Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
