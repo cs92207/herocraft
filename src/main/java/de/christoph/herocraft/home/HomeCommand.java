@@ -17,6 +17,10 @@ public class HomeCommand implements CommandExecutor {
             return false;
         }
         Player player = (Player) commandSender;
+        if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
+            player.sendMessage(Constant.PREFIX + "§7Das darfst du nicht im Gefängnis. Baue Obsidian ab, oder verlasse dein Land §0(§e/land§0)§7.");
+            return false;
+        }
         if(strings.length == 1) {
             if(strings[0].equalsIgnoreCase("list")) {
                 ArrayList<Home> playerHomes = HeroCraft.getPlugin().getHomeManager().getPlayerHomes().get(player);

@@ -18,6 +18,10 @@ public class Constant {
     public static final double QUEST_COINS = 5000;
     public static final double QUEST_GIVER_PRICE = 100000;
     public static final double QUEST_ARMEE_COINS = 3500;
+    public static final double RESIDENT_PRICE = 100000;
+    public static final double FIREFIGHTER_PRICE = 100000;
+    public static final double POLICE_PRICE = 100000;
+    public static final double DOCTOR_PRICE = 100000;
 
     public static final double DIMENSION_CHEST_PRICE = 400;
     public static final double LAND_PRICE = 600;

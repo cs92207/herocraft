@@ -48,6 +48,10 @@ public class LandShop implements CommandExecutor, Listener {
         inventory.addItem(getTroopSpawner());
         inventory.addItem(getSurvivalLandsChestItem());
         inventory.addItem(new ItemBuilder(Material.PAPER).setDisplayName("§4§lQuestgeber").setLore("", "§7Preis: §e" + Constant.QUEST_GIVER_PRICE).build());
+        inventory.addItem(new ItemBuilder(Material.EMERALD).setDisplayName("§4§lBewohner").setLore("", "§7Preis: §e" + Constant.RESIDENT_PRICE).build());
+        inventory.addItem(new ItemBuilder(Material.FIRE_CHARGE).setDisplayName("§c§lFeuerwehrmann").setLore("", "§7Preis: §e" + Constant.FIREFIGHTER_PRICE).build());
+        inventory.addItem(new ItemBuilder(Material.SHIELD).setDisplayName("§b§lPolizist").setLore("", "§7Preis: §e" + Constant.POLICE_PRICE).build());
+        inventory.addItem(new ItemBuilder(Material.GOLDEN_APPLE).setDisplayName("§a§lNotarzt").setLore("", "§7Preis: §e" + Constant.DOCTOR_PRICE).build());
         player.openInventory(inventory);
         return false;
     }
@@ -146,6 +150,16 @@ public class LandShop implements CommandExecutor, Listener {
             player.getInventory().addItem(new ItemBuilder(Material.PAPER).setDisplayName("§4§lQuestgeber").setLore("", "§7Rechtsklick zum platzieren").build());
             player.sendMessage(Constant.PREFIX + "§7Questgeber §agekauft§7.");
             HeroCraft.getPlugin().coin.removeMoney(player, Constant.QUEST_GIVER_PRICE);
+        } else if(diplayName.equalsIgnoreCase("§4§lBewohner")) {
+            if(HeroCraft.getPlugin().coin.getCoins(player) < Constant.RESIDENT_PRICE) {
+                player.closeInventory();
+                player.sendMessage(Constant.PREFIX + "§7Dazu hast du nicht genug §cCoins§7.");
+                return;
+            }
+            player.getInventory().addItem(new ItemBuilder(Material.EMERALD).setDisplayName("§4§lBewohner").setLore("", "§7Rechtsklick zum platzieren").build());
+            player.sendMessage(Constant.PREFIX + "§7Bewohner §agekauft§7.");
+            HeroCraft.getPlugin().coin.removeMoney(player, Constant.RESIDENT_PRICE);
+            player.closeInventory();
         } else if(diplayName.equalsIgnoreCase("§4§lTruppen Spawner")) {
             if(HeroCraft.getPlugin().coin.getCoins(player) < Constant.TROOP_SPAWNER_PRICE) {
                 player.closeInventory();
@@ -197,6 +211,36 @@ public class LandShop implements CommandExecutor, Listener {
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
                 player.sendMessage(Constant.PREFIX + "§7Dazu hast du nicht genug §cCoins§7.");
             }
+        } else if(diplayName.equalsIgnoreCase("§c§lFeuerwehrmann")) {
+            if(HeroCraft.getPlugin().coin.getCoins(player) < Constant.FIREFIGHTER_PRICE) {
+                player.closeInventory();
+                player.sendMessage(Constant.PREFIX + "§7Dazu hast du nicht genug §cCoins§7.");
+                return;
+            }
+            player.getInventory().addItem(new ItemBuilder(Material.FIRE_CHARGE).setDisplayName("§c§lFeuerwehrmann").setLore("", "§7Rechtsklick zum platzieren").build());
+            player.sendMessage(Constant.PREFIX + "§c§lFeuerwehrmann §agekauft§7.");
+            HeroCraft.getPlugin().coin.removeMoney(player, Constant.FIREFIGHTER_PRICE);
+            player.closeInventory();
+        } else if(diplayName.equalsIgnoreCase("§b§lPolizist")) {
+            if(HeroCraft.getPlugin().coin.getCoins(player) < Constant.POLICE_PRICE) {
+                player.closeInventory();
+                player.sendMessage(Constant.PREFIX + "§7Dazu hast du nicht genug §cCoins§7.");
+                return;
+            }
+            player.getInventory().addItem(new ItemBuilder(Material.SHIELD).setDisplayName("§b§lPolizist").setLore("", "§7Rechtsklick zum platzieren").build());
+            player.sendMessage(Constant.PREFIX + "§b§lPolizist §agekauft§7.");
+            HeroCraft.getPlugin().coin.removeMoney(player, Constant.POLICE_PRICE);
+            player.closeInventory();
+        } else if(diplayName.equalsIgnoreCase("§a§lNotarzt")) {
+            if(HeroCraft.getPlugin().coin.getCoins(player) < Constant.DOCTOR_PRICE) {
+                player.closeInventory();
+                player.sendMessage(Constant.PREFIX + "§7Dazu hast du nicht genug §cCoins§7.");
+                return;
+            }
+            player.getInventory().addItem(new ItemBuilder(Material.GOLDEN_APPLE).setDisplayName("§a§lNotarzt").setLore("", "§7Rechtsklick zum platzieren").build());
+            player.sendMessage(Constant.PREFIX + "§a§lNotarzt §agekauft§7.");
+            HeroCraft.getPlugin().coin.removeMoney(player, Constant.DOCTOR_PRICE);
+            player.closeInventory();
         }
     }
 

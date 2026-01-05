@@ -1,203 +1,211 @@
-package de.christoph.herocraft.quests;
+/*     */ package de.christoph.herocraft.quests;
+/*     */
+/*     */ import de.christoph.herocraft.HeroCraft;
+/*     */ import java.io.File;
+/*     */ import java.io.IOException;
+/*     */ import java.util.ArrayList;
+/*     */ import java.util.HashMap;
+/*     */ import java.util.HashSet;
+/*     */ import java.util.LinkedHashSet;
+/*     */ import java.util.List;
+/*     */ import java.util.Map;
+/*     */ import java.util.Set;
+/*     */ import java.util.UUID;
+/*     */ import java.util.concurrent.ConcurrentHashMap;
+/*     */ import org.bukkit.Bukkit;
+/*     */ import org.bukkit.configuration.file.FileConfiguration;
+/*     */ import org.bukkit.event.EventHandler;
+/*     */ import org.bukkit.event.Listener;
+/*     */ import org.bukkit.event.server.PluginDisableEvent;
+/*     */ import org.bukkit.plugin.Plugin;
+/*     */ import org.bukkit.scheduler.BukkitRunnable;
+import org.checkerframework.checker.units.qual.K;
 
-import de.christoph.herocraft.HeroCraft;
-import org.bukkit.Bukkit;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.event.Listener;
-import org.bukkit.event.server.PluginDisableEvent;
-import org.bukkit.event.EventHandler;
-import org.bukkit.scheduler.BukkitRunnable;
+/*     */
+/*     */
+/*     */ public class QuestStorageQueue
+        /*     */   implements Listener
+        /*     */ {
+    /*     */   private final HeroCraft plugin;
+    /*     */   private final File questFile;
+    /*     */   private final FileConfiguration cfg;
+    /*  30 */   private final Map<UUID, PlayerDelta> playerDeltas = new ConcurrentHashMap<>();
+    /*     */
+    /*     */
+    /*  33 */   private final Map<UUID, VillagerDelta> villagerDeltas = new ConcurrentHashMap<>();
+    /*     */
+    /*     */
+    /*  36 */   private final Map<String, Set<UUID>> landVillagerSetsToMerge = new ConcurrentHashMap<>();
+    /*     */
+    /*  38 */   private int flushTaskId = -1;
+    /*     */   private final int flushSeconds;
+    /*     */
+    /*     */   public QuestStorageQueue(HeroCraft plugin, File questFile, FileConfiguration cfg, int flushSeconds) {
+        /*  42 */     this.plugin = plugin;
+        /*  43 */     this.questFile = questFile;
+        /*  44 */     this.cfg = cfg;
+        /*  45 */     this.flushSeconds = Math.max(2, flushSeconds);
+        /*     */
+        /*  47 */     Bukkit.getPluginManager().registerEvents(this, (Plugin)plugin);
+        /*  48 */     startFlushScheduler();
+        /*     */   }
+    /*     */
+    /*     */   public static class PlayerDelta {
+        /*     */     public Long last;
+        /*     */     public List<String> questsFrom;
+        /*  54 */     public Map<String, Integer> progress = new HashMap<>();
+        /*     */   }
+    /*     */
+    /*     */   public static class VillagerDelta
+            /*     */   {
+        /*     */     public String quest;
+        /*     */     public Long giveQuest;
+        /*     */     public Integer progress;
+        /*     */     public String land;
+        /*     */   }
+    /*     */
+    /*     */   public void setPlayerLast(UUID player, long last) {
+        /*  66 */     ((PlayerDelta)this.playerDeltas.computeIfAbsent(player, k -> new PlayerDelta())).last = Long.valueOf(last);
+        /*     */   }
+    /*     */
+    /*     */
+    /*     */   public void setPlayerQuestsFrom(UUID player, List<String> questsFrom) {
+        /*  71 */     ((PlayerDelta)this.playerDeltas.computeIfAbsent(player, k -> new PlayerDelta())).questsFrom = new ArrayList<>(questsFrom);
+        /*     */   }
+    /*     */
+    /*     */
+    /*     */   public void setPlayerQuestProgress(UUID player, String questDescription, int progress) {
+        /*  76 */     ((PlayerDelta)this.playerDeltas.computeIfAbsent(player, k -> new PlayerDelta())).progress.put(questDescription, Integer.valueOf(progress));
+        /*     */   }
+    /*     */
+    /*     */
+    /*     */   public void updateVillager(UUID villagerId, String quest, Long giveQuest, Integer progress, String land) {
+        /*  81 */     VillagerDelta d = this.villagerDeltas.computeIfAbsent(villagerId, k -> new VillagerDelta());
+        /*  82 */     if (quest != null) d.quest = quest;
+        /*  83 */     if (giveQuest != null) d.giveQuest = giveQuest;
+        /*  84 */     if (progress != null) d.progress = progress;
+        /*  85 */     if (land != null) d.land = land;
+        /*  86 */     if (land != null) {
+            /*  87 */       ((Set<UUID>)this.landVillagerSetsToMerge.computeIfAbsent(land, k -> new HashSet())).add(villagerId);
+            /*     */     }
+        /*     */   }
+    /*     */
+    /*     */
+    /*     */   public void addVillagerToLand(String land, UUID villagerId) {
+        /*  93 */     ((Set<UUID>)this.landVillagerSetsToMerge.computeIfAbsent(land, k -> new HashSet())).add(villagerId);
+        /*     */   }
+    /*     */
+    /*     */
+    /*     */
+    /*     */   public void flushNow() {
+        /*  99 */     if (!Bukkit.isPrimaryThread()) {
+            /* 100 */       Bukkit.getScheduler().runTask((Plugin)this.plugin, this::applyAndSave);
+            /*     */     } else {
+            /* 102 */       applyAndSave();
+            /*     */     }
+        /*     */   }
+    /*     */
+    /*     */
+    /*     */   private void startFlushScheduler() {
+        /* 108 */     this
+                /*     */
+                /*     */
+                /*     */
+                /*     */
+                /* 113 */       .flushTaskId = (new BukkitRunnable() { public void run() { QuestStorageQueue.this.applyAndSave(); } }).runTaskTimer((Plugin)this.plugin, 20L * this.flushSeconds, 20L * this.flushSeconds).getTaskId();
+        /*     */   }
+    /*     */
+    /*     */   private void applyAndSave() {
+        /* 117 */     boolean dirty = false;
+        /*     */
+        /*     */
+        /* 120 */     if (!this.playerDeltas.isEmpty()) {
+            /* 121 */       for (Map.Entry<UUID, PlayerDelta> e : this.playerDeltas.entrySet()) {
+                /* 122 */         UUID uuid = e.getKey();
+                /* 123 */         PlayerDelta d = e.getValue();
+                /*     */
+                /* 125 */         String base = "players." + uuid.toString();
+                /* 126 */         if (d.last != null) {
+                    /* 127 */           this.cfg.set(base + ".last", d.last);
+                    /* 128 */           dirty = true;
+                    /*     */         }
+                /* 130 */         if (d.questsFrom != null) {
+                    /* 131 */           this.cfg.set(base + ".questsFrom", d.questsFrom);
+                    /* 132 */           dirty = true;
+                    /*     */         }
+                /* 134 */         if (!d.progress.isEmpty()) {
+                    /* 135 */           for (Map.Entry<String, Integer> p : d.progress.entrySet()) {
+                        /* 136 */             this.cfg.set(base + ".progress." + base, p.getValue());
+                        /* 137 */             dirty = true;
+                        /*     */           }
+                    /*     */         }
+                /*     */       }
+            /* 141 */       this.playerDeltas.clear();
+            /*     */     }
+        /*     */
+        /*     */
+        /* 145 */     if (!this.villagerDeltas.isEmpty()) {
+            /* 146 */       for (Map.Entry<UUID, VillagerDelta> e : this.villagerDeltas.entrySet()) {
+                /* 147 */         UUID id = e.getKey();
+                /* 148 */         VillagerDelta d = e.getValue();
+                /*     */
+                /* 150 */         String base = "villagers." + id.toString();
+                /* 151 */         if (d.quest != null) {
+                    /* 152 */           this.cfg.set(base + ".quest", d.quest);
+                    /* 153 */           dirty = true;
+                    /*     */         }
+                /* 155 */         if (d.giveQuest != null) {
+                    /* 156 */           this.cfg.set(base + ".giveQuest", d.giveQuest);
+                    /* 157 */           dirty = true;
+                    /*     */         }
+                /* 159 */         if (d.progress != null) {
+                    /* 160 */           this.cfg.set(base + ".progress", d.progress);
+                    /* 161 */           dirty = true;
+                    /*     */         }
+                /* 163 */         if (d.land != null) {
+                    /* 164 */           this.cfg.set(base + ".land", d.land);
+                    /* 165 */           dirty = true;
+                    /*     */         }
+                /*     */       }
+            /* 168 */       this.villagerDeltas.clear();
+            /*     */     }
+        /*     */
+        /*     */
+        /* 172 */     if (!this.landVillagerSetsToMerge.isEmpty()) {
+            /* 173 */       for (Map.Entry<String, Set<UUID>> e : this.landVillagerSetsToMerge.entrySet()) {
+                /* 174 */         String land = e.getKey();
+                /* 175 */         Set<UUID> toAdd = e.getValue();
+                /*     */
+                /* 177 */         List<String> current = this.cfg.getStringList("villagersByLand." + land);
+                /* 178 */         Set<String> merged = new LinkedHashSet<>(current);
+                /* 179 */         for (UUID id : toAdd) merged.add(id.toString());
+                /* 180 */         this.cfg.set("villagersByLand." + land, new ArrayList<>(merged));
+                /* 181 */         dirty = true;
+                /*     */       }
+            /* 183 */       this.landVillagerSetsToMerge.clear();
+            /*     */     }
+        /*     */
+        /* 186 */     if (dirty) {
+            /*     */       try {
+                /* 188 */         this.cfg.save(this.questFile);
+                /* 189 */       } catch (IOException ex) {
+                /* 190 */         ex.printStackTrace();
+                /*     */       }
+            /*     */     }
+        /*     */   }
+    /*     */
+    /*     */   @EventHandler
+    /*     */   public void onDisable(PluginDisableEvent e) {
+        /* 197 */     if (e.getPlugin() == this.plugin) {
+            /*     */
+            /* 199 */       applyAndSave();
+            /* 200 */       if (this.flushTaskId != -1) Bukkit.getScheduler().cancelTask(this.flushTaskId);
+            /*     */     }
+        /*     */   }
+    /*     */ }
 
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Zentraler Write-Buffer für alle Quest-Daten.
- * - Keine Disk-Writes mehr in Events.
- * - Batch-Flush alle N Sekunden (default 5s) im Main-Thread.
+/* Location:              C:\Users\schmi\Desktop\Allgemein\Programmieren\Speicher\WebApps\HeroCraft-1.0-SNAPSHOT-shaded.jar!\de\christoph\herocraft\quests\QuestStorageQueue.class
+ * Java compiler version: 9 (53.0)
+ * JD-Core Version:       1.1.3
  */
-public class QuestStorageQueue implements Listener {
-
-    private final HeroCraft plugin;
-    private final File questFile;
-    private final FileConfiguration cfg;
-
-    // Buffer: nur Deltas halten → minimiert Schreibarbeit
-    // players:<uuid>: { last?, questsFrom?[], progress?<map> }
-    private final Map<UUID, PlayerDelta> playerDeltas = new ConcurrentHashMap<>();
-
-    // villagers:<uuid>: full fields gespeichert als Delta
-    private final Map<UUID, VillagerDelta> villagerDeltas = new ConcurrentHashMap<>();
-
-    // villagersByLand:<land> -> set of UUIDs (wir halten auch Deltas dafür)
-    private final Map<String, Set<UUID>> landVillagerSetsToMerge = new ConcurrentHashMap<>();
-
-    private int flushTaskId = -1;
-    private final int flushSeconds;
-
-    public QuestStorageQueue(HeroCraft plugin, File questFile, FileConfiguration cfg, int flushSeconds) {
-        this.plugin = plugin;
-        this.questFile = questFile;
-        this.cfg = cfg;
-        this.flushSeconds = Math.max(2, flushSeconds);
-        // Listener registrieren, damit wir bei Disable flushen
-        Bukkit.getPluginManager().registerEvents(this, plugin);
-        startFlushScheduler();
-    }
-
-    public static class PlayerDelta {
-        public Long last; // nullable
-        public List<String> questsFrom; // nullable - ersetzt komplett
-        public Map<String, Integer> progress = new HashMap<>(); // questDesc -> progress increment/absolute (wir speichern absolute)
-    }
-
-    public static class VillagerDelta {
-        public String quest; // "" = keine
-        public Long giveQuest;
-        public Integer progress;
-        public String land;
-    }
-
-    /** Spieler: last setzen */
-    public void setPlayerLast(UUID player, long last) {
-        playerDeltas.computeIfAbsent(player, k -> new PlayerDelta()).last = last;
-    }
-
-    /** Spieler: gesamte questsFrom Liste ersetzen */
-    public void setPlayerQuestsFrom(UUID player, List<String> questsFrom) {
-        playerDeltas.computeIfAbsent(player, k -> new PlayerDelta()).questsFrom = new ArrayList<>(questsFrom);
-    }
-
-    /** Spieler: Quest-Fortschritt als ABSOLUTEN Wert setzen */
-    public void setPlayerQuestProgress(UUID player, String questDescription, int progress) {
-        playerDeltas.computeIfAbsent(player, k -> new PlayerDelta()).progress.put(questDescription, progress);
-    }
-
-    /** Villager: kompletten Satz Felder aktualisieren (nur was != null ist wird übernommen) */
-    public void updateVillager(UUID villagerId, String quest, Long giveQuest, Integer progress, String land) {
-        VillagerDelta d = villagerDeltas.computeIfAbsent(villagerId, k -> new VillagerDelta());
-        if (quest != null) d.quest = quest;
-        if (giveQuest != null) d.giveQuest = giveQuest;
-        if (progress != null) d.progress = progress;
-        if (land != null) d.land = land;
-        if (land != null) { // auch Mapping pflegen
-            landVillagerSetsToMerge.computeIfAbsent(land, k -> new HashSet<>()).add(villagerId);
-        }
-    }
-
-    /** Villager: Zuordnung Land → Villager-UUID mergen */
-    public void addVillagerToLand(String land, UUID villagerId) {
-        landVillagerSetsToMerge.computeIfAbsent(land, k -> new HashSet<>()).add(villagerId);
-    }
-
-    /** Öffentliche Flush-Methode (falls du manuell flushen willst) */
-    public void flushNow() {
-        // wir führen Flush synchron im Main-Thread aus
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(plugin, this::applyAndSave);
-        } else {
-            applyAndSave();
-        }
-    }
-
-    private void startFlushScheduler() {
-        // Alle N Sekunden im Main Thread flushen
-        flushTaskId = new BukkitRunnable() {
-            @Override
-            public void run() {
-                applyAndSave();
-            }
-        }.runTaskTimer(plugin, 20L * flushSeconds, 20L * flushSeconds).getTaskId();
-    }
-
-    private void applyAndSave() {
-        boolean dirty = false;
-
-        // Players
-        if (!playerDeltas.isEmpty()) {
-            for (Map.Entry<UUID, PlayerDelta> e : playerDeltas.entrySet()) {
-                UUID uuid = e.getKey();
-                PlayerDelta d = e.getValue();
-
-                String base = "players." + uuid.toString();
-                if (d.last != null) {
-                    cfg.set(base + ".last", d.last);
-                    dirty = true;
-                }
-                if (d.questsFrom != null) {
-                    cfg.set(base + ".questsFrom", d.questsFrom);
-                    dirty = true;
-                }
-                if (!d.progress.isEmpty()) {
-                    for (Map.Entry<String, Integer> p : d.progress.entrySet()) {
-                        cfg.set(base + ".progress." + p.getKey(), p.getValue());
-                        dirty = true;
-                    }
-                }
-            }
-            playerDeltas.clear();
-        }
-
-        // Villagers
-        if (!villagerDeltas.isEmpty()) {
-            for (Map.Entry<UUID, VillagerDelta> e : villagerDeltas.entrySet()) {
-                UUID id = e.getKey();
-                VillagerDelta d = e.getValue();
-
-                String base = "villagers." + id.toString();
-                if (d.quest != null) {
-                    cfg.set(base + ".quest", d.quest);
-                    dirty = true;
-                }
-                if (d.giveQuest != null) {
-                    cfg.set(base + ".giveQuest", d.giveQuest);
-                    dirty = true;
-                }
-                if (d.progress != null) {
-                    cfg.set(base + ".progress", d.progress);
-                    dirty = true;
-                }
-                if (d.land != null) {
-                    cfg.set(base + ".land", d.land);
-                    dirty = true;
-                }
-            }
-            villagerDeltas.clear();
-        }
-
-        // villagersByLand
-        if (!landVillagerSetsToMerge.isEmpty()) {
-            for (Map.Entry<String, Set<UUID>> e : landVillagerSetsToMerge.entrySet()) {
-                String land = e.getKey();
-                Set<UUID> toAdd = e.getValue();
-
-                List<String> current = cfg.getStringList("villagersByLand." + land);
-                Set<String> merged = new LinkedHashSet<>(current);
-                for (UUID id : toAdd) merged.add(id.toString());
-                cfg.set("villagersByLand." + land, new ArrayList<>(merged));
-                dirty = true;
-            }
-            landVillagerSetsToMerge.clear();
-        }
-
-        if (dirty) {
-            try {
-                cfg.save(questFile);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    @EventHandler
-    public void onDisable(PluginDisableEvent e) {
-        if (e.getPlugin() == plugin) {
-            // Letzter Flush beim Plugin-Disable
-            applyAndSave();
-            if (flushTaskId != -1) Bukkit.getScheduler().cancelTask(flushTaskId);
-        }
-    }
-}

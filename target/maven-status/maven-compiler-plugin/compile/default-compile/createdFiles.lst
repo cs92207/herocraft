@@ -2,6 +2,7 @@ de\christoph\herocraft\specialitems\NatureSword.class
 de\christoph\herocraft\dimensions\DimensionManager$1.class
 de\christoph\herocraft\dimensions\DimensionStorage.class
 de\christoph\herocraft\market\AuctioneersOffer.class
+de\christoph\herocraft\jobs\JobCommand.class
 de\christoph\herocraft\specialitems\Pistol.class
 de\christoph\herocraft\prison\PrisonManager.class
 de\christoph\herocraft\birthday\BirthdayCommand.class
@@ -46,10 +47,12 @@ de\christoph\herocraft\booster\SpeedBooster.class
 de\christoph\herocraft\school\skills\activeskills\Laser$1.class
 de\christoph\herocraft\armee\ResearchResultCommand.class
 de\christoph\herocraft\market\Auctioneers$1.class
+de\christoph\herocraft\jobs\JobGUI.class
 de\christoph\herocraft\armee\SuperheroManager.class
 de\christoph\herocraft\basiccommands\ReplyCommand.class
 de\christoph\herocraft\lands\UntrustCommand.class
 de\christoph\herocraft\markethall\AnimalMarketShop.class
+de\christoph\herocraft\lands\officials\OfficialManager.class
 de\christoph\herocraft\dimensions\HotDessert$1.class
 de\christoph\herocraft\insurance\InsuranceGui.class
 de\christoph\herocraft\school\skills\passiveskills\Strongness.class
@@ -78,6 +81,7 @@ de\christoph\herocraft\specialitems\HawkEyeBow.class
 de\christoph\herocraft\specialitems\DuckStick.class
 de\christoph\herocraft\basiccommands\RenameCommand.class
 de\christoph\herocraft\landpresentation\LandPresentationManager.class
+de\christoph\herocraft\lands\residents\Resident.class
 de\christoph\herocraft\school\skills\activeskills\Magic$2.class
 de\christoph\herocraft\lands\armee\NormalTroop.class
 de\christoph\herocraft\lands\Land$1.class
@@ -90,7 +94,9 @@ de\christoph\herocraft\dungeons\Dungeon.class
 de\christoph\herocraft\lands\armee\ArmeeManager.class
 de\christoph\herocraft\caseopening\NormalCrate.class
 de\christoph\herocraft\challenges\config\Aufgabe.class
+de\christoph\herocraft\lands\residents\ResidentManager$1.class
 de\christoph\herocraft\booster\JumpBooster.class
+de\christoph\herocraft\lands\residents\ResidentManager.class
 de\christoph\herocraft\insurance\PlayerInsurance.class
 de\christoph\herocraft\lands\Goverment$4.class
 de\christoph\herocraft\raids\Raid$2.class
@@ -153,6 +159,7 @@ de\christoph\herocraft\caseopening\SetCaseOpeningCommand.class
 de\christoph\herocraft\afksystem\AdminAFK.class
 de\christoph\herocraft\basiccommands\MsgCommand.class
 de\christoph\herocraft\booster\Booster$1.class
+de\christoph\herocraft\lands\residents\ResidentGUI.class
 de\christoph\herocraft\school\skills\passiveskills\Jump.class
 de\christoph\herocraft\tutorial\TutorialVideo.class
 de\christoph\herocraft\market\Auctioneers$3.class
@@ -196,6 +203,7 @@ de\christoph\herocraft\quests\QuestVillager.class
 de\christoph\herocraft\lands\Goverment$3.class
 de\christoph\herocraft\utils\ChatClickBuilder.class
 de\christoph\herocraft\dimensions\WinterDimension.class
+de\christoph\herocraft\lands\officials\Official.class
 de\christoph\herocraft\protection\ProtectionListener.class
 de\christoph\herocraft\dimensions\NatureAdventure$1.class
 de\christoph\herocraft\quests\QuestStorageQueue$1.class
@@ -206,12 +214,14 @@ de\christoph\herocraft\lands\province\Province$1.class
 de\christoph\herocraft\dimensions\NatureAdventure$1$3$1.class
 de\christoph\herocraft\basiccommands\SpawnCommand.class
 de\christoph\herocraft\voteday\VoteDayNoCommand.class
+de\christoph\herocraft\lands\officials\OfficialManager$1.class
 de\christoph\herocraft\lands\LandGUI$1.class
 de\christoph\herocraft\raids\EndRaid.class
 de\christoph\herocraft\lands\Goverment$2.class
 de\christoph\herocraft\markethall\FloristMarketShop.class
 de\christoph\herocraft\lands\province\CityBlock.class
 de\christoph\herocraft\basiccommands\CommandsCommand.class
+de\christoph\herocraft\jobs\JobType.class
 de\christoph\herocraft\quests\Quest.class
 de\christoph\herocraft\insurance\Insurance.class
 de\christoph\herocraft\dimensions\SpringDimension.class
@@ -234,6 +244,7 @@ de\christoph\herocraft\dimensions\BlackDessert$1.class
 de\christoph\herocraft\lands\LandCreator$2.class
 de\christoph\herocraft\school\skills\Skill.class
 de\christoph\herocraft\dimensions\SummerDimension.class
+de\christoph\herocraft\jobs\Job.class
 de\christoph\herocraft\lands\province\TownHall$1.class
 de\christoph\herocraft\lands\roles\LandPermission.class
 de\christoph\herocraft\lands\province\CityBlock$1.class
@@ -256,10 +267,13 @@ de\christoph\herocraft\lands\province\TownHall.class
 de\christoph\herocraft\specialitems\HawkEyeBow$1.class
 de\christoph\herocraft\armee\Rarity.class
 de\christoph\herocraft\quests\KillMobQuest.class
+de\christoph\herocraft\jobs\JobGUI$1.class
 de\christoph\herocraft\school\skills\passiveskills\Strongness$1.class
 de\christoph\herocraft\basiccommands\FarmworldCommand.class
 de\christoph\herocraft\insurance\insurances\ToolInsurance$1.class
 de\christoph\herocraft\voteday\VoteDay$1.class
+de\christoph\herocraft\jobs\JobListener.class
+de\christoph\herocraft\jobs\JobManager.class
 de\christoph\herocraft\tutorial\TutorialNPCCommand.class
 de\christoph\herocraft\specialitems\CaptainAmericaShield.class
 de\christoph\herocraft\basiccommands\VanishCommand.class
@@ -290,4 +304,5 @@ de\christoph\herocraft\lands\province\TownHall$2.class
 de\christoph\herocraft\school\skills\activeskills\Magic.class
 de\christoph\herocraft\lands\province\TownHall$1$1.class
 de\christoph\herocraft\voteday\VoteDayYesCommand.class
+de\christoph\herocraft\jobs\JobManager$1.class
 de\christoph\herocraft\booster\BoosterManager.class

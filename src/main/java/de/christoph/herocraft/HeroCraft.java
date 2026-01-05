@@ -26,15 +26,22 @@ import de.christoph.herocraft.economy.CoinCommand;
 import de.christoph.herocraft.home.HomeCommand;
 import de.christoph.herocraft.home.HomeManager;
 import de.christoph.herocraft.insurance.InsuranceGui;
+import de.christoph.herocraft.jobs.JobCommand;
+import de.christoph.herocraft.jobs.JobGUI;
+import de.christoph.herocraft.jobs.JobListener;
+import de.christoph.herocraft.jobs.JobManager;
 import de.christoph.herocraft.insurance.InsuranceManager;
 import de.christoph.herocraft.landpresentation.LandPresentationManager;
 import de.christoph.herocraft.landpresentation.SetPresentationHoloLocationCommand;
 import de.christoph.herocraft.landpresentation.VoteForLandCommand;
 import de.christoph.herocraft.lands.*;
+import de.christoph.herocraft.lands.officials.OfficialManager;
 import de.christoph.herocraft.lands.armee.ArmeeManager;
 import de.christoph.herocraft.lands.province.CityBlock;
 import de.christoph.herocraft.lands.province.ProvinceManager;
 import de.christoph.herocraft.lands.province.TownHall;
+import de.christoph.herocraft.lands.residents.ResidentGUI;
+import de.christoph.herocraft.lands.residents.ResidentManager;
 import de.christoph.herocraft.lands.roles.LandRoleManager;
 import de.christoph.herocraft.market.*;
 import de.christoph.herocraft.market.herokea.HeroKeaListener;
@@ -46,6 +53,7 @@ import de.christoph.herocraft.prison.SetPrisonSpawnPointCommand;
 import de.christoph.herocraft.protection.ProtectionListener;
 import de.christoph.herocraft.protection.SneakChallenge;
 import de.christoph.herocraft.quests.DailyQuest;
+import de.christoph.herocraft.quests.QuestVillager;
 import de.christoph.herocraft.raids.*;
 import de.christoph.herocraft.school.MentorCommand;
 import de.christoph.herocraft.school.MentorListener;
@@ -101,12 +109,17 @@ public final class HeroCraft extends JavaPlugin {
     public DailyQuest dailyQuest;
 
     public PrisonManager prisonManager;
+    public JobManager jobManager;
+    public JobGUI jobGUI;
+    public ResidentManager residentManager;
+    public ResidentGUI residentGUI;
+    public OfficialManager officialManager;
 
     @Override
     public void onEnable() {
         plugin = this;
-        mySQL = new MySQL("144.76.83.19", 3306, "herocraft", "SV-Studios", "1Emanuel0602#");
-        shopMySQL = new MySQL("144.76.83.19", 3306, "shop", "SV-Studios", "1Emanuel0602#");
+        mySQL = new MySQL("api.pauen-it.de", 3306, "herocraft", "anyblocks", "EULVAq7WfowAv5yRhpPbsJt0c6Wfvx49");
+        shopMySQL = new MySQL("api.pauen-it.de", 3306, "shop", "anyblocks", "EULVAq7WfowAv5yRhpPbsJt0c6Wfvx49");
         coin = new Coin();
         auctioneers = new Auctioneers();
         landManager = new LandManager();
@@ -122,7 +135,19 @@ public final class HeroCraft extends JavaPlugin {
         raidManager = new RaidManager();
         dailyQuest = new DailyQuest();
         prisonManager = new PrisonManager();
+        jobManager = new JobManager();
+        jobGUI = new JobGUI();
+        residentManager = new ResidentManager();
+        residentGUI = new ResidentGUI();
+        officialManager = new OfficialManager();
         Bukkit.getPluginManager().registerEvents(prisonManager, this);
+        Bukkit.getPluginManager().registerEvents(jobManager, this);
+        Bukkit.getPluginManager().registerEvents(new JobListener(), this);
+        Bukkit.getPluginManager().registerEvents(jobGUI, this);
+        Bukkit.getPluginManager().registerEvents(residentManager, this);
+        Bukkit.getPluginManager().registerEvents(residentGUI, this);
+        Bukkit.getPluginManager().registerEvents(officialManager, this);
+        getCommand("job").setExecutor(new JobCommand());
         getCommand("taeglichequest").setExecutor(dailyQuest);
         Bukkit.getPluginManager().registerEvents(dailyQuest, this);
         getCommand("killalltroops").setExecutor(new KillAllTroopsCommand());
@@ -315,10 +340,18 @@ public final class HeroCraft extends JavaPlugin {
             i.killAllRaidEntities();
             i.finishRaidFailed();
         }
-        landPresentationManager.richestHolo.delete();
-        landPresentationManager.bestHolo.delete();
         Bukkit.getScheduler().cancelTask(dimensionManager.getTaskID());
         Bukkit.getScheduler().cancelTask(dimensionManager.getTaskID2());
+        
+        // Alle Job-Daten beim Shutdown speichern
+        if (jobManager != null) {
+            jobManager.saveAllJobs();
+        }
+        
+        // Alle Bewohner-Villager beim Shutdown entfernen (damit keine Duplikate beim Neustart)
+        if (residentManager != null) {
+            residentManager.removeAllResidentVillagers();
+        }
     }
 
     public static HeroCraft getPlugin() {
@@ -350,6 +383,10 @@ public final class HeroCraft extends JavaPlugin {
         return insuranceManager;
     }
 
+    public ResidentManager getResidentManager() {
+        return residentManager;
+    }
+
     public VoteDayManager getVoteDayManager() {
         return voteDayManager;
     }
@@ -372,6 +409,22 @@ public final class HeroCraft extends JavaPlugin {
 
     public ProvinceManager getProvinceManager() {
         return provinceManager;
+    }
+
+    public JobManager getJobManager() {
+        return jobManager;
+    }
+
+    public JobGUI getJobGUI() {
+        return jobGUI;
+    }
+
+    public ResidentGUI getResidentGUI() {
+        return residentGUI;
+    }
+
+    public OfficialManager getOfficialManager() {
+        return officialManager;
     }
 
 }
