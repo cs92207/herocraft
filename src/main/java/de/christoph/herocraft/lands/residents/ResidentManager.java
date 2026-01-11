@@ -35,12 +35,20 @@ public class ResidentManager implements Listener {
     private HashMap<String, Resident> residents; // LocationKey (world:x:y:z) -> Resident
 
     // Score-Reduktion pro Update (alle 15 Minuten)
-    // Ziel: In 2 Tagen (2880 Minuten) von 600 auf ~0 (sehr unglücklich = 200)
-    // 2880 Min / 15 Min = 192 Updates
-    // 600 - 200 = 400 Punkte Reduktion nötig
-    // 400 / 192 = ~2.1 Punkte pro Update
-    // Wir nehmen -3 Punkte pro Update für sanfte aber sichtbare Reduktion
-    private static final int SCORE_REDUCTION_PER_UPDATE = 3;
+    // Ziel: Ein "Sehr zufrieden" Bewohner (Score 801+) soll in 7 Tagen auf "Sehr unglücklich" (Score <= 200) fallen
+    // 7 Tage = 10.080 Minuten
+    // 10.080 Min / 15 Min = 672 Updates in 7 Tagen
+    // Von Score 801 auf Score 200 = 601 Punkte Reduktion
+    // 601 / 672 = ~0.895 Punkte pro Update (linear)
+    // 
+    // Wir verwenden eine prozentuale Reduktion, die sicherstellt:
+    // - Bei Score 801: Reduktion von ~0.9 Punkten pro Update
+    // - Bei Score 400: Reduktion von ~0.45 Punkten pro Update
+    // - Bei Score 200: Reduktion von ~0.22 Punkten pro Update
+    // Formel: Reduktion = (currentScore - 200) / 672 (angepasst für 7 Tage von 801 auf 200)
+    private static final int UPDATES_IN_7_DAYS = 672; // 7 Tage * 24h * 60min / 15min
+    private static final int SCORE_SEHR_ZUFRIEDEN_START = 801; // Start-Score für "Sehr zufrieden"
+    private static final int SCORE_SEHR_UNGGLUECKLICH_END = 200; // End-Score für "Sehr unglücklich"
 
     public ResidentManager() {
         this.connection = HeroCraft.getPlugin().getMySQL().getConnection();
@@ -269,7 +277,7 @@ public class ResidentManager implements Listener {
         for (org.bukkit.entity.Entity entity : chunk.getEntities()) {
             if (entity instanceof Villager) {
                 Villager villager = (Villager) entity;
-                if (villager.getCustomName() != null && villager.getCustomName().startsWith("§e§lBewohner von " + resident.getLandName())) {
+                if (villager.getCustomName() != null && villager.getCustomName().startsWith("§e§l" + resident.getLandName())) {
                     // Villager existiert bereits - nur Name updaten
                     villager.setCustomName(resident.getVillagerName());
                     villager.setCustomNameVisible(true);
@@ -370,6 +378,13 @@ public class ResidentManager implements Listener {
     }
 
     /**
+     * Updated den Namen des Villagers sofort (public für externe Aufrufe)
+     */
+    public void updateVillagerNameImmediate(Resident resident) {
+        updateVillagerName(resident);
+    }
+    
+    /**
      * Updated den Namen des Villagers nur wenn er geladen ist
      */
     private void updateVillagerName(Resident resident) {
@@ -382,13 +397,17 @@ public class ResidentManager implements Listener {
         // Nur updaten wenn Chunk geladen ist
         if (!chunk.isLoaded()) return;
         
-        // Suche Villager an dieser Location
+        // Suche Villager an dieser Location (basierend auf Location, nicht Name)
         for (org.bukkit.entity.Entity entity : chunk.getEntities()) {
             if (entity instanceof Villager) {
                 Villager villager = (Villager) entity;
-                // Prüfe ob es der richtige Villager ist (anhand des Namens)
-                if (villager.getCustomName() != null && villager.getCustomName().startsWith("§e§lBewohner von " + resident.getLandName())) {
+                Location entityLoc = villager.getLocation();
+                // Prüfe nur anhand der Location (nicht des Namens, da sich der Name ändern kann)
+                if (Math.abs(entityLoc.getX() - resident.getX()) < 0.5 &&
+                    Math.abs(entityLoc.getY() - resident.getY()) < 0.5 &&
+                    Math.abs(entityLoc.getZ() - resident.getZ()) < 0.5) {
                     villager.setCustomName(resident.getVillagerName());
+                    villager.setCustomNameVisible(true);
                     return;
                 }
             }
@@ -407,7 +426,7 @@ public class ResidentManager implements Listener {
 
     public boolean isResident(Entity entity) {
         if (!(entity instanceof Villager)) return false;
-        if (!entity.getCustomName().startsWith("§e§lBewohner von")) return false;
+        if (entity.getCustomName() == null || !entity.getCustomName().startsWith("§e§l")) return false;
         Location location = entity.getLocation();
         String locationKey = Resident.createLocationKey(location.getWorld().getName(), location.getX(), location.getY(), location.getZ());
         return residents.containsKey(locationKey);
@@ -499,7 +518,7 @@ public class ResidentManager implements Listener {
         
         if (!HeroCraft.getPlugin().getOfficialManager().hasRequiredOfficialsInRadius(residentLocation, resident.getLandName())) {
             String missing = HeroCraft.getPlugin().getOfficialManager().getMissingOfficialsMessage(residentLocation, resident.getLandName());
-            player.sendMessage("§e§lBewohner §7§l| §cIm Umkreis von 10 Blöcken fehlen: §e" + missing);
+            player.sendMessage("§e§lBewohner §7§l| §cIm Umkreis von 80 Blöcken fehlen: §e" + missing);
             player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 0.5f, 1.0f);
             return;
         }
@@ -583,6 +602,8 @@ public class ResidentManager implements Listener {
             resident.setStatusData("");
             resident.resetStatusInteractionCount();
             updateResident(resident);
+            // Name sofort aktualisieren, damit der Status (Bedürfnis) sofort sichtbar ist
+            updateVillagerNameImmediate(resident);
         } else {
             player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 0.5f, 1.0f);
             player.sendMessage("§e§lBewohner §7§l| §cIch bin zu unglücklich, um Steuern zu zahlen!");
@@ -853,7 +874,26 @@ public class ResidentManager implements Listener {
         Chunk chunk = event.getChunk();
         String worldName = chunk.getWorld().getName();
         
-        // Spawne alle Bewohner in diesem Chunk, die noch nicht existieren
+        // Prüfe alle Entities im Chunk auf bereits existierende Bewohner (für Name-Update)
+        // Persistente Villager werden automatisch von Minecraft beim Chunk-Load gespawnt
+        for (org.bukkit.entity.Entity entity : chunk.getEntities()) {
+            if (!(entity instanceof Villager)) continue;
+            Resident resident = getResidentByLocation(entity.getLocation());
+            if (resident != null) {
+                // Name sofort updaten wenn Chunk geladen wird
+                updateVillagerName(resident);
+                
+                // Stelle sicher, dass persistente Eigenschaften gesetzt sind
+                Villager villager = (Villager) entity;
+                villager.setPersistent(true);
+                villager.setRemoveWhenFarAway(false);
+                villager.setAI(false);
+                villager.setGravity(false);
+            }
+        }
+        
+        // Prüfe ob Bewohner in diesem Chunk sind, die noch keinen Villager haben
+        // (z.B. beim ersten Laden nach dem Erstellen)
         for (Resident resident : residents.values()) {
             if (!resident.getWorld().equals(worldName)) continue;
             
@@ -866,29 +906,20 @@ public class ResidentManager implements Listener {
                 boolean found = false;
                 for (org.bukkit.entity.Entity entity : chunk.getEntities()) {
                     if (entity instanceof Villager) {
-                        Villager villager = (Villager) entity;
-                        if (villager.getCustomName() != null && villager.getCustomName().startsWith("§e§lBewohner von " + resident.getLandName())) {
-                            // Villager existiert bereits - nur Name updaten
-                            updateVillagerName(resident);
+                        Location entityLoc = entity.getLocation();
+                        // Prüfe nur anhand der Location (nicht des Namens, da sich der Name ändern kann)
+                        if (Math.abs(entityLoc.getX() - resident.getX()) < 0.5 &&
+                            Math.abs(entityLoc.getY() - resident.getY()) < 0.5 &&
+                            Math.abs(entityLoc.getZ() - resident.getZ()) < 0.5) {
                             found = true;
                             break;
                         }
                     }
                 }
                 if (!found) {
-                    // Spawne neuen Villager
+                    // Nur spawnen wenn wirklich kein Villager existiert (z.B. beim ersten Laden nach dem Erstellen)
                     spawnResidentVillager(resident);
                 }
-            }
-        }
-        
-        // Prüfe alle Entities im Chunk auf bereits existierende Bewohner (für Name-Update)
-        for (org.bukkit.entity.Entity entity : chunk.getEntities()) {
-            if (!(entity instanceof Villager)) continue;
-            Resident resident = getResidentByLocation(entity.getLocation());
-            if (resident != null) {
-                // Name sofort updaten wenn Chunk geladen wird
-                updateVillagerName(resident);
             }
         }
     }
@@ -973,19 +1004,34 @@ public class ResidentManager implements Listener {
             public void run() {
                 updateAllResidentScores();
             }
-        //}.runTaskTimer(HeroCraft.getPlugin(), 20L * 60 * 15, 20L * 60 * 15); // Start nach 15 Min, dann alle 15 Min
-        }.runTaskTimer(HeroCraft.getPlugin(), 20*10, 20*2); // Start nach 15 Min, dann alle 15 Min
+        }.runTaskTimer(HeroCraft.getPlugin(), 20L * 60 * 15, 20L * 60 * 15); // Start nach 15 Min, dann alle 15 Min
     }
 
     /**
      * Updated alle Bewohner-Scores und deren Namen
+     * Reduktion ist so berechnet, dass ein "Sehr zufrieden" Bewohner (801+) 
+     * in 7 Tagen auf "Sehr unglücklich" (<=200) fällt
      */
     private void updateAllResidentScores() {
         for (Resident resident : new java.util.ArrayList<>(residents.values())) {
-            System.out.println(resident.getLandName() + "Weniger zugriedenheit");
-            // Score reduzieren
             int currentScore = resident.getHappinessScore();
-            int newScore = Math.max(0, currentScore - SCORE_REDUCTION_PER_UPDATE);
+            
+            // Berechne prozentuale Reduktion basierend auf aktuellem Score
+            // Formel: Reduktion = (currentScore - TARGET_MIN) / UPDATES_IN_7_DAYS
+            // Dies sorgt dafür, dass ein Bewohner bei Score 801 nach 672 Updates bei Score 200 ist
+            double reduction;
+            if (currentScore > SCORE_SEHR_UNGGLUECKLICH_END) {
+                // Berechne wie viele Punkte noch reduziert werden müssen, um in 7 Tagen auf 200 zu fallen
+                reduction = (double)(currentScore - SCORE_SEHR_UNGGLUECKLICH_END) / UPDATES_IN_7_DAYS;
+                // Minimum 0.1 Punkte pro Update für sichtbare Reduktion
+                reduction = Math.max(0.1, reduction);
+            } else {
+                // Bereits bei oder unter 200 - minimale Reduktion (kann aber nicht unter 0)
+                reduction = 0.1;
+            }
+            
+            // Score reduzieren (mindestens 0)
+            int newScore = Math.max(0, (int)(currentScore - reduction));
             resident.setHappinessScore(newScore);
             
             // In Datenbank speichern (asynchron für Performance)
@@ -1034,7 +1080,7 @@ public class ResidentManager implements Listener {
                 for (org.bukkit.entity.Entity entity : chunk.getEntities()) {
                     if (entity instanceof Villager) {
                         Villager villager = (Villager) entity;
-                        if (villager.getCustomName() != null && villager.getCustomName().startsWith("§e§lBewohner von " + resident.getLandName())) {
+                        if (villager.getCustomName() != null && villager.getCustomName().startsWith("§e§l" + resident.getLandName())) {
                             entity.remove();
                             break;
                         }

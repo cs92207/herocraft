@@ -257,7 +257,7 @@ public class Resident {
      */
     public String getVillagerName() {
         String statusDisplay = getStatusDisplayName();
-        return "§e§lBewohner von " + landName + " §7[" + getHappinessStatus() + "§7] §8(§7" + happinessScore + "§8) §r§f§l[" + statusDisplay + "§f§l]";
+        return "§e§l" + landName + " §7[" + getHappinessStatus() + "§7] §8(§7" + happinessScore + "§8) §r§f§l[" + statusDisplay + "§f§l]";
     }
     
     /**
@@ -282,17 +282,17 @@ public class Resident {
     public double getTaxAmount() {
         switch (getHappinessLevel()) {
             case 5:
-                return 500.0; // Sehr zufrieden
+                return 5000.0; // Sehr zufrieden
             case 4:
-                return 350.0; // Zufrieden
+                return 4000.0; // Zufrieden
             case 3:
-                return 200.0; // Neutral
+                return 3000.0; // Neutral
             case 2:
-                return 100.0; // Unglücklich
+                return 2000.0; // Unglücklich
             case 1:
-                return 0.0; // Sehr unglücklich - keine Steuern
+                return 1000.0; // Sehr unglücklich
             default:
-                return 200.0;
+                return 3000.0;
         }
     }
     

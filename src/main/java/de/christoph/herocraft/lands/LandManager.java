@@ -19,8 +19,10 @@
 /*     */ import org.bukkit.Location;
 /*     */ import org.bukkit.Material;
 /*     */ import org.bukkit.block.Block;
+/*     */ import org.bukkit.entity.ArmorStand;
 /*     */ import org.bukkit.entity.Entity;
 /*     */ import org.bukkit.entity.EntityType;
+/*     */ import org.bukkit.entity.ItemFrame;
 /*     */ import org.bukkit.entity.Player;
 /*     */ import org.bukkit.entity.Projectile;
 /*     */ import org.bukkit.event.EventHandler;
@@ -29,8 +31,12 @@
 /*     */ import org.bukkit.event.block.BlockBreakEvent;
 /*     */ import org.bukkit.event.block.BlockPlaceEvent;
 /*     */ import org.bukkit.event.entity.EntityDamageByEntityEvent;
+/*     */ import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+/*     */ import org.bukkit.event.player.PlayerInteractEntityEvent;
 /*     */ import org.bukkit.event.player.PlayerInteractEvent;
 /*     */ import org.bukkit.event.player.PlayerMoveEvent;
+/*     */ import org.bukkit.entity.ArmorStand;
+/*     */ import org.bukkit.entity.ItemFrame;
 /*     */
 /*     */ public class LandManager
         /*     */   implements Listener
@@ -659,6 +665,47 @@
             /*     */       return;
         /* 683 */     if (!land.canBuild(player))
             /* 684 */       event.setCancelled(true);
+        /*     */   }
+    /*     */
+    /*     */
+    /*     */
+    /*     */
+    /*     */   @EventHandler
+    /*     */   public void onHangingBreak(HangingBreakByEntityEvent event) {
+        /*     */     if (!(event.getRemover() instanceof Player)) {
+            /*     */       return;
+            /*     */     }
+        /*     */     Player player = (Player) event.getRemover();
+        /*     */     if (player.hasPermission("herowars.build")) {
+            /*     */       return;
+            /*     */     }
+        /*     */     if (event.getEntity() instanceof ItemFrame) {
+            /*     */       Land land = getLandAtLocation(event.getEntity().getLocation(), this.allLands);
+            /*     */       if (land == null) {
+                /*     */         return;
+                /*     */       }
+            /*     */       if (!land.canBuild(player)) {
+                /*     */         event.setCancelled(true);
+                /*     */       }
+            /*     */     }
+        /*     */   }
+    /*     */
+
+    /*     */   @EventHandler
+    /*     */   public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        /*     */     Player player = event.getPlayer();
+        /*     */     if (player.hasPermission("herowars.build")) {
+            /*     */       return;
+            /*     */     }
+        /*     */     if (event.getRightClicked() instanceof ItemFrame || event.getRightClicked() instanceof ArmorStand) {
+            /*     */       Land land = getLandAtLocation(event.getRightClicked().getLocation(), this.allLands);
+            /*     */       if (land == null) {
+                /*     */         return;
+                /*     */       }
+            /*     */       if (!land.canBuild(player)) {
+                /*     */         event.setCancelled(true);
+                /*     */       }
+            /*     */     }
         /*     */   }
     /*     */
     /*     */   @Nullable

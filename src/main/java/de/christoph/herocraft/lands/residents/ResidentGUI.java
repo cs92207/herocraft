@@ -8,7 +8,9 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Jukebox;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Husk;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -26,7 +28,7 @@ import java.util.Set;
 
 public class ResidentGUI implements Listener {
 
-    private static final String GUI_TITLE = ":offset_-16::resident_gui:";
+    private static final String GUI_TITLE = ":offset_-16::daily_task:";
     
     // Slots im GUI (9x5 = 45 Slots)
     private static final int SLOT_HAPPINESS = 4; // Oben, Mitte (für Progressbar)
@@ -39,6 +41,8 @@ public class ResidentGUI implements Listener {
     private static final int SLOT_SOCIAL = 13;      // Sozialbedürfnis befriedigen
     private static final int SLOT_ENTERTAINMENT = 14; // Unterhaltung bringen
     private static final int SLOT_ADVENTURE = 15;   // Abenteuerlust befriedigen
+    private static final int SLOT_COMMING_SOON_1 = 16; // Coming Soon 1
+    private static final int SLOT_COMMING_SOON_2 = 17; // Coming Soon 2
 
     // Temporäre Speicherung für GUI-Interaktionen
     private static HashMap<Player, Resident> openGUIs = new HashMap<>();
@@ -67,6 +71,9 @@ public class ResidentGUI implements Listener {
         inventory.setItem(SLOT_SOCIAL, createActionItem(player, resident, "SOCIAL", activeNeeds.contains("SOCIAL")));
         inventory.setItem(SLOT_ENTERTAINMENT, createActionItem(player, resident, "ENTERTAINMENT", activeNeeds.contains("ENTERTAINMENT")));
         inventory.setItem(SLOT_ADVENTURE, createActionItem(player, resident, "ADVENTURE", activeNeeds.contains("ADVENTURE")));
+        
+        // Coming Soon Barrier-Items (ohne Funktion)
+        inventory.setItem(SLOT_COMMING_SOON_1, createComingSoonItem());
 
         player.openInventory(inventory);
         player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 0.5f, 1.0f);
@@ -523,8 +530,8 @@ public class ResidentGUI implements Listener {
                     lore.add("§7+ 1 Bett + 2 Kerzen im Umkreis");
                     break;
                 case "SOCIAL":
-                    lore.add("§7Du musst mindestens 2 Minuten");
-                    lore.add("§7im Umkreis des Bewohners gewesen sein");
+                    lore.add("§7Ein Villager muss im Umkreis");
+                    lore.add("§7des Bewohners sein");
                     break;
                 case "ENTERTAINMENT":
                     lore.add("§7Eine Jukebox muss in der Nähe");
@@ -590,7 +597,7 @@ public class ResidentGUI implements Listener {
             case "REST":
                 return checkRestConditions(residentLocation);
             case "SOCIAL":
-                return checkSocialConditions(player, resident);
+                return checkSocialConditions(resident);
             case "ENTERTAINMENT":
                 return checkEntertainmentConditions(residentLocation);
             case "ADVENTURE":
@@ -648,12 +655,37 @@ public class ResidentGUI implements Listener {
     }
     
     /**
-     * Prüft Bedingungen für Sozialbedürfnis: Spieler muss 2 Minuten im Umkreis gewesen sein
+     * Prüft Bedingungen für Sozialbedürfnis: Ein Villager muss im Umkreis sein
      */
-    private boolean checkSocialConditions(Player player, Resident resident) {
-        long timeInVicinity = resident.getSocialTimeForPlayer(player.getUniqueId());
-        long twoMinutesInMillis = 2 * 60 * 1000; // 2 Minuten
-        return timeInVicinity >= twoMinutesInMillis;
+    private boolean checkSocialConditions(Resident resident) {
+        Location residentLocation = getResidentLocation(resident);
+        if (residentLocation == null) return false;
+        
+        World world = residentLocation.getWorld();
+        if (world == null) return false;
+        
+        double radius = 10.0; // Radius in Blöcken
+        
+        // Suche nach Villagern im Umkreis (einschließlich Husk für Beamte)
+        for (Entity entity : world.getNearbyEntities(residentLocation, radius, radius, radius)) {
+            if (entity instanceof Villager || entity instanceof Husk) {
+                // Prüfe ob es nicht der Bewohner selbst ist
+                if (entity instanceof Villager) {
+                    Villager villager = (Villager) entity;
+                    // Prüfe ob es der Bewohner selbst ist (gleiche Location)
+                    Location entityLoc = villager.getLocation();
+                    if (Math.abs(entityLoc.getX() - resident.getX()) < 0.1 &&
+                        Math.abs(entityLoc.getY() - resident.getY()) < 0.1 &&
+                        Math.abs(entityLoc.getZ() - resident.getZ()) < 0.1) {
+                        continue; // Das ist der Bewohner selbst, überspringe
+                    }
+                }
+                // Ein anderer Villager/Husk wurde gefunden
+                return true;
+            }
+        }
+        
+        return false; // Kein Villager in der Nähe gefunden
     }
     
     /**
@@ -769,22 +801,18 @@ public class ResidentGUI implements Listener {
     }
     
     /**
-     * Zerstört Jukebox im Umkreis (für Unterhaltung)
+     * Erstellt ein "Coming Soon" Barrier-Item
      */
-    private void destroyJukebox(Location location) {
-        int radius = 10;
+    private ItemStack createComingSoonItem() {
+        List<String> lore = new ArrayList<>();
+        lore.add("");
+        lore.add("§7Comming Soon");
+        lore.add("");
         
-        for (int x = -radius; x <= radius; x++) {
-            for (int y = -radius; y <= radius; y++) {
-                for (int z = -radius; z <= radius; z++) {
-                    Block block = location.clone().add(x, y, z).getBlock();
-                    if (block.getType() == Material.JUKEBOX) {
-                        block.setType(Material.AIR);
-                        return; // Nur eine Jukebox zerstören
-                    }
-                }
-            }
-        }
+        return new ItemBuilder(Material.BARRIER)
+                .setDisplayName("§8§lComming Soon")
+                .setLore((ArrayList<String>) lore)
+                .build();
     }
 
     /**
@@ -858,10 +886,7 @@ public class ResidentGUI implements Listener {
                 break;
             case "ENTERTAINMENT":
                 baseBonus = 12;
-                // Zerstöre Jukebox im Umkreis
-                if (residentLocation != null) {
-                    destroyJukebox(residentLocation);
-                }
+                // Jukebox wird nicht mehr zerstört
                 break;
             case "ADVENTURE":
                 baseBonus = 22;
@@ -962,22 +987,7 @@ public class ResidentGUI implements Listener {
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 1.0f);
         
         // Aktualisiere Resident und generiere neue aktive Bedürfnisse
-        if (actionType.equals("SOCIAL")) {
-            // Entferne Tracking-Eintrag nach erfolgreicher Aktion (Spieler muss wieder 2 Minuten warten)
-            String tracking = resident.getSocialTimeTracking();
-            String uuidStr = player.getUniqueId().toString();
-            if (tracking != null && tracking.contains(uuidStr + ":")) {
-                String[] entries = tracking.split(",");
-                StringBuilder newTracking = new StringBuilder();
-                for (String entry : entries) {
-                    if (!entry.startsWith(uuidStr + ":")) {
-                        if (newTracking.length() > 0) newTracking.append(",");
-                        newTracking.append(entry);
-                    }
-                }
-                resident.setSocialTimeTracking(newTracking.toString());
-            }
-        }
+        // (Tracking wird für SOCIAL nicht mehr benötigt, da es jetzt nur auf Villager-Präsenz basiert)
         
         resident.generateNewActiveNeeds();
         
@@ -988,6 +998,8 @@ public class ResidentGUI implements Listener {
         }
         
         HeroCraft.getPlugin().getResidentManager().updateResident(resident);
+        // Name sofort aktualisieren nach Status-Änderung, damit der neue Status sofort sichtbar ist
+        HeroCraft.getPlugin().getResidentManager().updateVillagerNameImmediate(resident);
         
         // GUI schließen nach erfolgreicher Aktion
         player.closeInventory();

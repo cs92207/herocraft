@@ -387,7 +387,7 @@ public class OfficialManager implements Listener {
     }
 
     private void handleSalaryPayment(Player player, Official official, Land land) {
-        // Prüfe ob überfällig (2 Tage)
+        // Prüfe ob überfällig (mehr als 10 Tage - dann wird der Beamte arbeitslos und verlässt)
         if (official.isSalaryOverdue()) {
             // Entfernen - finde Entity an Location
             org.bukkit.World world = Bukkit.getWorld(official.getWorld());
@@ -419,10 +419,19 @@ public class OfficialManager implements Listener {
             return;
         }
 
-        // Prüfe ob heute bereits gezahlt
-        if (official.isSalaryPaidToday()) {
+        // Prüfe ob in den letzten 7 Tagen bereits gezahlt wurde
+        if (official.isSalaryPaidWithin7Days()) {
+            long currentTime = System.currentTimeMillis();
+            long timeSincePayment = currentTime - official.getLastSalaryTime();
+            long daysSincePayment = timeSincePayment / (86400000L); // Millisekunden zu Tagen
+            long remainingDays = 7 - daysSincePayment;
+            
             player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 0.5f, 1.0f);
-            player.sendMessage("§e§lBeamter §7§l| §cDas Gehalt wurde heute bereits gezahlt!");
+            if (remainingDays > 0) {
+                player.sendMessage("§e§lBeamter §7§l| §cDas Gehalt wurde bereits gezahlt! Nächste Bezahlung in §e" + remainingDays + " Tag(en)§c.");
+            } else {
+                player.sendMessage("§e§lBeamter §7§l| §cDas Gehalt wurde bereits in den letzten 7 Tagen gezahlt!");
+            }
             return;
         }
 
@@ -472,37 +481,66 @@ public class OfficialManager implements Listener {
     }
 
     /**
-     * Prüft ob im Umkreis von 10 Blöcken alle benötigten Offiziere vorhanden sind
+     * Prüft ob im Umkreis von 80 Blöcken alle benötigten Offiziere vorhanden sind
      */
     public boolean hasRequiredOfficialsInRadius(Location location, String landName) {
         boolean hasFirefighter = false;
         boolean hasPolice = false;
         boolean hasDoctor = false;
 
+        org.bukkit.World world = location.getWorld();
+        if (world == null) return false; // Welt muss geladen sein
+
         for (Official official : officials.values()) {
             if (!official.getLandName().equals(landName)) continue;
 
+            // Prüfe ob die Welt des Beamten geladen ist
+            org.bukkit.World officialWorld = Bukkit.getWorld(official.getWorld());
+            if (officialWorld == null) continue; // Welt nicht geladen - Beamter nicht verfügbar
+            
+            // Prüfe ob Welt übereinstimmt
+            if (!world.getName().equals(officialWorld.getName())) continue;
+
             Location officialLocation = new Location(
-                    Bukkit.getWorld(official.getWorld()),
+                    officialWorld,
                     official.getX(),
                     official.getY(),
                     official.getZ()
             );
 
-            if (location.getWorld().getName().equals(officialLocation.getWorld().getName())) {
-                double distance = location.distance(officialLocation);
-                if (distance <= 10.0) {
-                    switch (official.getType()) {
-                        case "FIREFIGHTER":
-                            hasFirefighter = true;
+            // Prüfe ob das Entity tatsächlich existiert (Husk)
+            boolean entityExists = false;
+            org.bukkit.Chunk chunk = officialLocation.getChunk();
+            if (chunk.isLoaded()) {
+                for (Entity entity : chunk.getEntities()) {
+                    if (entity instanceof Husk) {
+                        Location entityLoc = entity.getLocation();
+                        // Prüfe ob es der richtige Beamte ist (anhand der Location)
+                        if (Math.abs(entityLoc.getX() - official.getX()) < 0.5 &&
+                            Math.abs(entityLoc.getY() - official.getY()) < 0.5 &&
+                            Math.abs(entityLoc.getZ() - official.getZ()) < 0.5) {
+                            entityExists = true;
                             break;
-                        case "POLICE":
-                            hasPolice = true;
-                            break;
-                        case "DOCTOR":
-                            hasDoctor = true;
-                            break;
+                        }
                     }
+                }
+            }
+            
+            // Nur wenn Entity existiert, prüfe Distanz
+            if (!entityExists) continue;
+
+            double distance = location.distance(officialLocation);
+            if (distance <= 80.0) {
+                switch (official.getType()) {
+                    case "FIREFIGHTER":
+                        hasFirefighter = true;
+                        break;
+                    case "POLICE":
+                        hasPolice = true;
+                        break;
+                    case "DOCTOR":
+                        hasDoctor = true;
+                        break;
                 }
             }
         }
@@ -518,30 +556,61 @@ public class OfficialManager implements Listener {
         boolean hasPolice = false;
         boolean hasDoctor = false;
 
+        org.bukkit.World world = location.getWorld();
+        if (world == null) {
+            return "Feuerwehrmann, Polizist, Arzt"; // Wenn Welt nicht geladen, alle fehlen
+        }
+
         for (Official official : officials.values()) {
             if (!official.getLandName().equals(landName)) continue;
 
+            // Prüfe ob die Welt des Beamten geladen ist
+            org.bukkit.World officialWorld = Bukkit.getWorld(official.getWorld());
+            if (officialWorld == null) continue; // Welt nicht geladen - Beamter nicht verfügbar
+            
+            // Prüfe ob Welt übereinstimmt
+            if (!world.getName().equals(officialWorld.getName())) continue;
+
             Location officialLocation = new Location(
-                    Bukkit.getWorld(official.getWorld()),
+                    officialWorld,
                     official.getX(),
                     official.getY(),
                     official.getZ()
             );
 
-            if (location.getWorld().getName().equals(officialLocation.getWorld().getName())) {
-                double distance = location.distance(officialLocation);
-                if (distance <= 10.0) {
-                    switch (official.getType()) {
-                        case "FIREFIGHTER":
-                            hasFirefighter = true;
+            // Prüfe ob das Entity tatsächlich existiert (Husk)
+            boolean entityExists = false;
+            org.bukkit.Chunk chunk = officialLocation.getChunk();
+            if (chunk.isLoaded()) {
+                for (Entity entity : chunk.getEntities()) {
+                    if (entity instanceof Husk) {
+                        Location entityLoc = entity.getLocation();
+                        // Prüfe ob es der richtige Beamte ist (anhand der Location)
+                        if (Math.abs(entityLoc.getX() - official.getX()) < 0.5 &&
+                            Math.abs(entityLoc.getY() - official.getY()) < 0.5 &&
+                            Math.abs(entityLoc.getZ() - official.getZ()) < 0.5) {
+                            entityExists = true;
                             break;
-                        case "POLICE":
-                            hasPolice = true;
-                            break;
-                        case "DOCTOR":
-                            hasDoctor = true;
-                            break;
+                        }
                     }
+                }
+            }
+            
+            // Nur wenn Entity existiert, prüfe Distanz
+            if (!entityExists) continue;
+
+            double distance = location.distance(officialLocation);
+            if (distance <= 80.0) {
+                switch (official.getType()) {
+                    case "FIREFIGHTER":
+                        hasFirefighter = true;
+                        break;
+                    case "POLICE":
+                        hasPolice = true;
+                        break;
+                    case "DOCTOR":
+                        hasDoctor = true;
+                        break;
                 }
             }
         }

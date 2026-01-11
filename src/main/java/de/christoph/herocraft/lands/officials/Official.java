@@ -73,25 +73,34 @@ public class Official {
     }
     
     /**
-     * Prüft ob das Gehalt überfällig ist (mehr als 2 Tage)
+     * Prüft ob das Gehalt überfällig ist (mehr als 10 Tage - dann wird der Beamte arbeitslos)
      */
     public boolean isSalaryOverdue() {
         long currentTime = System.currentTimeMillis();
-        long twoDaysInMillis = 2 * 86400000L; // 2 Tage
-        return (currentTime - lastSalaryTime) > twoDaysInMillis;
+        long tenDaysInMillis = 10 * 86400000L; // 10 Tage (3 Tage Puffer nach 7 Tagen Bezahlungsfrist)
+        return (currentTime - lastSalaryTime) > tenDaysInMillis;
     }
     
     /**
-     * Prüft ob das Gehalt heute bereits gezahlt wurde
+     * Prüft ob das Gehalt in den letzten 7 Tagen bereits gezahlt wurde
      */
-    public boolean isSalaryPaidToday() {
-        // Wenn noch nie bezahlt wurde, dann nicht "heute bezahlt"
+    public boolean isSalaryPaidWithin7Days() {
+        // Wenn noch nie bezahlt wurde, dann nicht bezahlt
         if (salaryCount == 0 || lastSalaryTime == 0) {
             return false;
         }
         long currentTime = System.currentTimeMillis();
-        long oneDayInMillis = 86400000L; // 24 Stunden
-        return (currentTime - lastSalaryTime) < oneDayInMillis;
+        long sevenDaysInMillis = 7 * 86400000L; // 7 Tage
+        return (currentTime - lastSalaryTime) < sevenDaysInMillis;
+    }
+    
+    /**
+     * Prüft ob das Gehalt heute bereits gezahlt wurde (für Rückwärtskompatibilität - wird zu isSalaryPaidWithin7Days)
+     * @deprecated Verwende isSalaryPaidWithin7Days()
+     */
+    @Deprecated
+    public boolean isSalaryPaidToday() {
+        return isSalaryPaidWithin7Days();
     }
     
     /**
@@ -100,13 +109,13 @@ public class Official {
     public String getVillagerName() {
         String typeDisplay = getTypeDisplayName();
         if (isSalaryOverdue()) {
-            // Rot: Arbeitslos (mehr als 2 Tage nicht bezahlt)
+            // Rot: Arbeitslos (mehr als 10 Tage nicht bezahlt)
             return "§c§l" + typeDisplay + " §4§l[Arbeitslos]";
-        } else if (isSalaryPaidToday()) {
-            // Grün: Bezahlt (heute bereits gezahlt)
+        } else if (isSalaryPaidWithin7Days()) {
+            // Grün: Bezahlt (in den letzten 7 Tagen bezahlt)
             return "§a§l" + typeDisplay + " §2§l[bezahlt]";
         } else {
-            // Orange: Bezahlung fällig (mehr als 1 Tag, aber weniger als 2 Tage)
+            // Orange: Bezahlung fällig (mehr als 7 Tage vergangen, aber weniger als 10 Tage)
             return "§6§l" + typeDisplay + " §e§l[Bezahlung]";
         }
     }
