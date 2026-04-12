@@ -64,11 +64,11 @@ public class ResidentGUI implements Listener {
         // Alle 6 Aktionen (nur aktive Bedürfnisse werden angezeigt)
         String activeNeeds = resident.getActiveNeeds();
         
-        // Nur aktive Bedürfnisse anzeigen, inaktive als grau/Barrier
+        // Nur aktive Bedürfnisse anzeigen, inaktive als grau/roter Farbstoff
         inventory.setItem(SLOT_FOOD, createActionItem(player, resident, "FOOD", activeNeeds.contains("FOOD")));
         inventory.setItem(SLOT_REST, createActionItem(player, resident, "REST", activeNeeds.contains("REST")));
         inventory.setItem(SLOT_HEALTH, createActionItem(player, resident, "HEALTH", activeNeeds.contains("HEALTH")));
-        inventory.setItem(SLOT_SOCIAL, createActionItem(player, resident, "SOCIAL", activeNeeds.contains("SOCIAL")));
+        inventory.setItem(SLOT_SOCIAL, createActionItem(player, resident, "SOCIAL", false)); // SOCIAL entfernt - immer inaktiv
         inventory.setItem(SLOT_ENTERTAINMENT, createActionItem(player, resident, "ENTERTAINMENT", activeNeeds.contains("ENTERTAINMENT")));
         inventory.setItem(SLOT_ADVENTURE, createActionItem(player, resident, "ADVENTURE", activeNeeds.contains("ADVENTURE")));
         
@@ -320,10 +320,8 @@ public class ResidentGUI implements Listener {
             return;
         }
         if (slot == SLOT_SOCIAL && displayName.contains("Sozialbedürfnis")) {
-            if (activeNeeds.contains("SOCIAL")) {
-                handleAction(player, resident, "SOCIAL");
-                return; // GUI wird in handleAction geschlossen
-            }
+            // SOCIAL-Bedürfnis wurde entfernt - keine Aktion möglich
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.5f, 1.0f);
             refreshGUI(player, resident);
             return;
         }
@@ -459,7 +457,7 @@ public class ResidentGUI implements Listener {
                 break;
             case "HEALTH":
                 actionCount = resident.getActionHealthCount();
-                itemMaterial = Material.GOLDEN_APPLE;
+                itemMaterial = Material.POTION;
                 displayName = "§c§lGesundheit ermöglichen";
                 baseBonus = 25;
                 break;
@@ -488,7 +486,7 @@ public class ResidentGUI implements Listener {
                 baseBonus = 0;
         }
         
-        // Wenn nicht aktiv, zeige als inaktiv an
+        // Wenn nicht aktiv, zeige als inaktiv an (roter Farbstoff)
         if (!isActive) {
             List<String> lore = new ArrayList<>();
             lore.add("");
@@ -497,7 +495,7 @@ public class ResidentGUI implements Listener {
             lore.add("");
             lore.add("§7Aktiv: §cNein");
             
-            return new ItemBuilder(Material.GRAY_DYE)
+            return new ItemBuilder(Material.RED_DYE)
                     .setDisplayName("§7§l" + displayName.replace("§a§l", "").replace("§b§l", "").replace("§c§l", "").replace("§d§l", "").replace("§e§l", "").replace("§6§l", ""))
                     .setLore((ArrayList<String>) lore)
                     .build();
@@ -505,6 +503,22 @@ public class ResidentGUI implements Listener {
         
         // Vereinfachte Bedingungsprüfung (für jetzt - später können wir komplexe Bedingungen hinzufügen)
         boolean canPerform = checkActionConditions(player, resident, actionType);
+        
+        // Wenn aktiv aber nicht erfüllbar, zeige als grauer Farbstoff
+        if (!canPerform) {
+            List<String> lore = new ArrayList<>();
+            lore.add("");
+            lore.add("§7Dieses Bedürfnis ist aktiv");
+            lore.add("§7und muss erfüllt werden!");
+            lore.add("");
+            lore.add("§7Status: §aAktiv");
+            
+            return new ItemBuilder(Material.GRAY_DYE)
+                    .setDisplayName("§7§l" + displayName.replace("§a§l", "").replace("§b§l", "").replace("§c§l", "").replace("§d§l", "").replace("§e§l", "").replace("§6§l", ""))
+                    .setLore((ArrayList<String>) lore)
+                    .build();
+        }
+        
         int currentBonus = resident.calculateActionBonus(baseBonus, actionCount);
         
         List<String> lore = new ArrayList<>();
@@ -523,29 +537,34 @@ public class ResidentGUI implements Listener {
                     lore.add("§7Du brauchst Essen im Inventar");
                     break;
                 case "HEALTH":
-                    lore.add("§7Du brauchst einen OP Gold Apfel oder Heilungstränke");
+                    lore.add("§7Du brauchst Heilungstränke");
                     break;
                 case "REST":
-                    lore.add("§7Niedriges Lichtlevel (<8)");
-                    lore.add("§7+ 1 Bett + 2 Kerzen im Umkreis");
-                    break;
-                case "SOCIAL":
-                    lore.add("§7Ein Villager muss im Umkreis");
-                    lore.add("§7des Bewohners sein");
+                    lore.add("§7Du brauchst 1 Bett + 2 Kerzen");
+                    lore.add("§7im Umkreis des Bewohners");
                     break;
                 case "ENTERTAINMENT":
                     lore.add("§7Eine Jukebox muss in der Nähe");
                     lore.add("§7Musik abspielen");
                     break;
                 case "ADVENTURE":
-                    lore.add("§7Du musst ein Item haben, das");
-                    lore.add("§7der Bewohner noch nie gesehen hat");
+                    lore.add("§7Erlaubte Items:");
+                    lore.add("§7- Eisen Spitzhacke");
+                    lore.add("§7- Eisen Axt");
+                    lore.add("§7- Eisen Schaufel");
+                    lore.add("§7- Eisen Hacke");
+                    lore.add("§7- Eisen Schwert");
+                    lore.add("§7- Eisen Helm");
+                    lore.add("§7- Eisen Brustharnisch");
+                    lore.add("§7- Eisen Beinschienen");
+                    lore.add("§7- Eisen Stiefel");
+                    lore.add("§7(Der Bewohner muss diese bereits kennen)");
                     break;
                 default:
                     lore.add("§7Überprüfe die Anforderungen");
             }
             
-            return new ItemBuilder(Material.BARRIER)
+            return new ItemBuilder(Material.RED_DYE)
                     .setDisplayName(displayName)
                     .setLore((ArrayList<String>) lore)
                     .build();
@@ -582,11 +601,7 @@ public class ResidentGUI implements Listener {
                 }
                 return false;
             case "HEALTH":
-                // OP Gold Apfel oder Heilungstränke (Healing Potion)
-                if (player.getInventory().contains(Material.ENCHANTED_GOLDEN_APPLE)) {
-                    return true;
-                }
-                // Prüfe auf Healing Potions
+                // Prüfe auf Healing Potions (nur Heiltränke)
                 for (ItemStack item : player.getInventory().getContents()) {
                     if (item != null && item.getType() == Material.POTION) {
                         // Vereinfacht: Alle Potions akzeptiert (könnte später präziser sein)
@@ -617,18 +632,11 @@ public class ResidentGUI implements Listener {
     }
     
     /**
-     * Prüft Bedingungen für Erholung: Lichtlevel < 8, Bett vorhanden, 2 Kerzen im Umkreis
+     * Prüft Bedingungen für Erholung: Bett vorhanden, 2 Kerzen im Umkreis
      */
     private boolean checkRestConditions(Location location) {
-        // Prüfe Lichtlevel (muss niedrig sein)
-        Block block = location.getBlock();
-        int lightLevel = block.getLightLevel();
-        if (lightLevel >= 8) {
-            return false; // Lichtlevel muss niedrig sein
-        }
-        
-        // Prüfe Umkreis (Radius 5 Blöcke) nach Bett und Kerzen
-        int radius = 5;
+        // Prüfe Umkreis (Radius 200 Blöcke) nach Bett und Kerzen
+        int radius = 200;
         int bedCount = 0;
         int candleCount = 0;
         
@@ -692,7 +700,7 @@ public class ResidentGUI implements Listener {
      * Prüft Bedingungen für Unterhaltung: Jukebox muss in der Nähe laufen
      */
     private boolean checkEntertainmentConditions(Location location) {
-        int radius = 10;
+        int radius = 200;
         
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
@@ -713,30 +721,31 @@ public class ResidentGUI implements Listener {
     }
     
     /**
-     * Prüft Bedingungen für Abenteuerlust: Spieler muss ein Item im Inventar haben, das der Bewohner noch nicht gesehen hat
+     * Prüft Bedingungen für Abenteuerlust: Spieler muss ein Eisenwerkzeug oder Rüstung haben, das der Bewohner bereits gesehen hat
      */
     private boolean checkAdventureConditions(Player player, Resident resident) {
-        // Standard-Items die nicht zählen (dürfen nicht gegeben werden)
-        Set<Material> standardItems = new HashSet<>(Arrays.asList(
-            Material.DIRT, Material.STONE, Material.COBBLESTONE, Material.GRASS_BLOCK,
-            Material.SAND, Material.GRAVEL, Material.CLAY, Material.WATER_BUCKET,
-            Material.LAVA_BUCKET, Material.AIR, Material.VOID_AIR, Material.CAVE_AIR
+        // Erlaubte Items: Eisen-Tools und Rüstungen
+        Set<Material> allowedItems = new HashSet<>(Arrays.asList(
+            Material.IRON_PICKAXE, Material.IRON_AXE, Material.IRON_SHOVEL, 
+            Material.IRON_HOE, Material.IRON_SWORD,
+            Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, 
+            Material.IRON_BOOTS
         ));
         
-        // Prüfe Inventar nach Items, die der Bewohner noch nicht gesehen hat
+        // Prüfe Inventar nach Eisen-Tools/Rüstungen, die der Bewohner bereits gesehen hat
         for (ItemStack item : player.getInventory().getContents()) {
             if (item != null && item.getType() != Material.AIR) {
                 Material material = item.getType();
                 String materialName = material.toString();
                 
-                // Überspringe Standard-Items
-                if (standardItems.contains(material)) {
+                // Prüfe ob Item erlaubt ist (Eisen-Tool oder Rüstung)
+                if (!allowedItems.contains(material)) {
                     continue;
                 }
                 
-                // Prüfe ob Bewohner dieses Item schon gesehen hat
-                if (!resident.hasSeenItem(materialName)) {
-                    return true; // Item gefunden, das noch nicht gesehen wurde
+                // Prüfe ob Bewohner dieses Item bereits gesehen hat
+                if (resident.hasSeenItem(materialName)) {
+                    return true; // Item gefunden, das bereits gesehen wurde
                 }
             }
         }
@@ -752,7 +761,7 @@ public class ResidentGUI implements Listener {
         int baseBonus = 15;
         
         // Bonus-Anpassungen basierend auf Nahrungsqualität
-        if (foodType == Material.GOLDEN_APPLE || foodType == Material.ENCHANTED_GOLDEN_APPLE) {
+        if (foodType == Material.GOLDEN_APPLE) {
             return baseBonus + 15; // Sehr gute Nahrung
         } else if (foodType == Material.COOKED_BEEF || foodType == Material.COOKED_PORKCHOP || 
                    foodType == Material.COOKED_MUTTON || foodType == Material.COOKED_CHICKEN ||
@@ -774,7 +783,7 @@ public class ResidentGUI implements Listener {
      * Zerstört Bett und Kerzen im Umkreis (für Erholung)
      */
     private void destroyRestBlocks(Location location) {
-        int radius = 5;
+        int radius = 200;
         int bedsDestroyed = 0;
         int candlesDestroyed = 0;
         
@@ -849,35 +858,11 @@ public class ResidentGUI implements Listener {
                 break;
             case "HEALTH":
                 baseBonus = 25;
-                // Entferne OP Gold Apfel oder Potion
-                if (player.getInventory().contains(Material.ENCHANTED_GOLDEN_APPLE)) {
-                    HashMap<Integer, ItemStack> items = (HashMap<Integer, ItemStack>) player.getInventory().all(Material.ENCHANTED_GOLDEN_APPLE);
-                    for (ItemStack item : items.values()) {
-                        if (item.getAmount() == 1) {
-                            player.getInventory().remove(item);
-                        } else {
-                            item.setAmount(item.getAmount() - 1);
-                        }
-                        break;
-                    }
-                } else if (player.getInventory().contains(Material.POTION)) {
-                    HashMap<Integer, ItemStack> items = (HashMap<Integer, ItemStack>) player.getInventory().all(Material.POTION);
-                    for (ItemStack item : items.values()) {
-                        if (item.getAmount() == 1) {
-                            player.getInventory().remove(item);
-                        } else {
-                            item.setAmount(item.getAmount() - 1);
-                        }
-                        break;
-                    }
-                }
+                // Gold Apfel oder Potion werden NICHT entfernt (nur für Prüfung benötigt)
                 break;
             case "REST":
                 baseBonus = 18;
-                // Zerstöre Bett und Kerzen im Umkreis
-                if (residentLocation != null) {
-                    destroyRestBlocks(residentLocation);
-                }
+                // Bett und Kerzen werden NICHT zerstört (nur für Prüfung benötigt)
                 break;
             case "SOCIAL":
                 baseBonus = 15;
@@ -890,12 +875,14 @@ public class ResidentGUI implements Listener {
                 break;
             case "ADVENTURE":
                 baseBonus = 22;
-                // Entferne Item, das noch nicht gesehen wurde
+                // Item wird NICHT entfernt, aber als gesehen markiert
                 if (residentLocation != null) {
-                    Set<Material> standardItems = new HashSet<>(Arrays.asList(
-                        Material.DIRT, Material.STONE, Material.COBBLESTONE, Material.GRASS_BLOCK,
-                        Material.SAND, Material.GRAVEL, Material.CLAY, Material.WATER_BUCKET,
-                        Material.LAVA_BUCKET, Material.AIR, Material.VOID_AIR, Material.CAVE_AIR
+                    // Erlaubte Items: Eisen-Tools und Rüstungen
+                    Set<Material> allowedItems = new HashSet<>(Arrays.asList(
+                        Material.IRON_PICKAXE, Material.IRON_AXE, Material.IRON_SHOVEL, 
+                        Material.IRON_HOE, Material.IRON_SWORD,
+                        Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, 
+                        Material.IRON_BOOTS
                     ));
                     
                     for (ItemStack item : player.getInventory().getContents()) {
@@ -903,17 +890,14 @@ public class ResidentGUI implements Listener {
                             Material material = item.getType();
                             String materialName = material.toString();
                             
-                            if (standardItems.contains(material)) continue;
-                            if (resident.hasSeenItem(materialName)) continue;
-                            
-                            // Item gefunden, das noch nicht gesehen wurde
-                            resident.addSeenItem(materialName);
-                            if (item.getAmount() == 1) {
-                                player.getInventory().remove(item);
-                            } else {
-                                item.setAmount(item.getAmount() - 1);
+                            // Prüfe ob Item erlaubt ist
+                            if (!allowedItems.contains(material)) continue;
+                            // Prüfe ob bereits gesehen
+                            if (resident.hasSeenItem(materialName)) {
+                                // Item gefunden, das bereits gesehen wurde - als gesehen markieren, NICHT entfernen
+                                resident.addSeenItem(materialName);
+                                break;
                             }
-                            break;
                         }
                     }
                 }
@@ -991,7 +975,7 @@ public class ResidentGUI implements Listener {
         
         resident.generateNewActiveNeeds();
         
-        // Status ändern (nur jedes 3. Mal, wenn Status "NEED" ist)
+        // Status ändern (nur alle 10-15 Mal, wenn Status "NEED" ist)
         if (resident.getStatus().equals("NEED") && resident.incrementStatusInteractionCount()) {
             HeroCraft.getPlugin().getResidentManager().generateNewStatus(resident);
             resident.resetStatusInteractionCount();

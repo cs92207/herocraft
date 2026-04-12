@@ -28,6 +28,7 @@ public class TpaCommand implements CommandExecutor {
                     if(tpaPlayers.containsKey(player)) {
                         if(tpaPlayers.get(player) != null) {
                             tpaPlayers.get(player).teleport(player);
+                            tpaPlayers.remove(player);
                         } else {
                             player.sendMessage(Constant.PREFIX + "§7Der Spieler, der dir eine Anfrage gesendet hat ist nun Offline.");
                             tpaPlayers.remove(player);

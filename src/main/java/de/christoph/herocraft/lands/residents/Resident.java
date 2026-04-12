@@ -35,9 +35,10 @@ public class Resident {
     
     // Status-System
     private String status; // "NEED", "TAX", "ROBBED", "ACCIDENT"
-    private String statusData; // Zusätzliche Daten für Status (z.B. Mob-Typ bei ROBBED, Anzahl OP Goldäpfel bei ACCIDENT)
+    private String statusData; // Zusätzliche Daten für Status (z.B. Mob-Typ bei ROBBED, Anzahl Goldäpfel bei ACCIDENT)
     private int statusCount; // Wie oft dieser Status bereits erfüllt wurde (für steigende Kosten)
-    private int statusInteractionCount; // Zählt wie oft der aktuelle Status erfüllt wurde (für Status-Wechsel alle 3 Mal)
+    private int statusInteractionCount; // Zählt wie oft der aktuelle Status erfüllt wurde (für Status-Wechsel)
+    private int statusChangeTarget; // Zufälliger Zielwert zwischen 10-15 für Status-Wechsel
     
     // Score-Bereiche für Happiness Level
     public static final int SCORE_SEHR_UNGGLUECKLICH_MAX = 200;  // 0-200 = Sehr unglücklich
@@ -72,13 +73,14 @@ public class Resident {
         this.statusData = "";
         this.statusCount = 0;
         this.statusInteractionCount = 0;
+        this.statusChangeTarget = generateRandomStatusChangeTarget();
     }
     
     /**
      * Generiert initial 2 zufällige aktive Bedürfnisse
      */
     private static String generateInitialActiveNeeds() {
-        String[] allNeeds = {"FOOD", "REST", "HEALTH", "SOCIAL", "ENTERTAINMENT", "ADVENTURE"};
+        String[] allNeeds = {"FOOD", "REST", "HEALTH", "ENTERTAINMENT", "ADVENTURE"};
         java.util.Random random = new java.util.Random();
         int first = random.nextInt(allNeeds.length);
         int second;
@@ -137,6 +139,7 @@ public class Resident {
         this.statusData = (statusData == null) ? "" : statusData;
         this.statusCount = statusCount;
         this.statusInteractionCount = 0; // Wird nicht aus DB geladen, immer bei 0 starten
+        this.statusChangeTarget = generateRandomStatusChangeTarget(); // Neuer zufälliger Zielwert
     }
 
     /**
@@ -169,6 +172,13 @@ public class Resident {
 
     public String getWorld() {
         return world;
+    }
+
+    public void setLocation(double x, double y, double z, String world) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.world = world;
     }
 
     public int getHappinessScore() {
@@ -331,7 +341,7 @@ public class Resident {
      * Setzt neue aktive Bedürfnisse (2 zufällige)
      */
     public void generateNewActiveNeeds() {
-        String[] allNeeds = {"FOOD", "REST", "HEALTH", "SOCIAL", "ENTERTAINMENT", "ADVENTURE"};
+        String[] allNeeds = {"FOOD", "REST", "HEALTH", "ENTERTAINMENT", "ADVENTURE"};
         java.util.Random random = new java.util.Random();
         int first = random.nextInt(allNeeds.length);
         int second;
@@ -452,33 +462,43 @@ public class Resident {
     public void setStatusInteractionCount(int count) { this.statusInteractionCount = count; }
     
     /**
+     * Generiert einen zufälligen Zielwert zwischen 10 und 15 für Status-Wechsel
+     */
+    private int generateRandomStatusChangeTarget() {
+        java.util.Random random = new java.util.Random();
+        return 10 + random.nextInt(6); // 10-15 (10 + 0-5)
+    }
+    
+    /**
      * Erhöht den Status-Interaction-Count um 1
-     * Gibt true zurück, wenn der Status gewechselt werden soll (jedes 3. Mal)
+     * Gibt true zurück, wenn der Status gewechselt werden soll (alle 10-15 Mal)
      */
     public boolean incrementStatusInteractionCount() {
         this.statusInteractionCount++;
-        return this.statusInteractionCount >= 3;
+        return this.statusInteractionCount >= this.statusChangeTarget;
     }
     
     /**
      * Setzt den Status-Interaction-Count zurück (wenn Status gewechselt wurde)
+     * Generiert einen neuen zufälligen Zielwert zwischen 10-15
      */
     public void resetStatusInteractionCount() {
         this.statusInteractionCount = 0;
+        this.statusChangeTarget = generateRandomStatusChangeTarget();
     }
     
     /**
      * Berechnet die Kosten für Überfall-Status (steigend)
      */
     public double getRobbedCost() {
-        return 5000.0 + (statusCount * 2000.0); // Start: 5000, dann +2000 pro Mal
+        return 500.0 + (statusCount * 250.0); // Start: 500, dann +250 pro Mal (gleich wie Unfall)
     }
     
     /**
      * Berechnet die Kosten für Unfall-Status (steigend)
      */
     public double getAccidentCost() {
-        return 3000.0 + (statusCount * 1500.0); // Start: 3000, dann +1500 pro Mal
+        return 500.0 + (statusCount * 250.0); // Start: 500, dann +250 pro Mal (deutlich niedriger als Steuern)
     }
     
     /**

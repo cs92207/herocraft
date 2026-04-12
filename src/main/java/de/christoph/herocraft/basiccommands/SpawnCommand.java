@@ -29,7 +29,7 @@ public class SpawnCommand implements CommandExecutor {
                 @Override
                 public void run() {
                     if(spawnPlayers.contains(player)) {
-                        player.teleport(new Location(Bukkit.getWorld("world"), 77.5, 88.5, -229.5, -90F, 0.7F));
+                        player.teleport(new Location(Bukkit.getWorld("world"), 69.5, 89.5, -229.5, -90F, 0.7F));
                         spawnPlayers.remove(player);
                     }
                 }

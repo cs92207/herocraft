@@ -37,6 +37,7 @@ import de.christoph.herocraft.landpresentation.VoteForLandCommand;
 import de.christoph.herocraft.lands.*;
 import de.christoph.herocraft.lands.officials.OfficialManager;
 import de.christoph.herocraft.lands.armee.ArmeeManager;
+import de.christoph.herocraft.lands.quests.LandQuestManager;
 import de.christoph.herocraft.lands.province.CityBlock;
 import de.christoph.herocraft.lands.province.ProvinceManager;
 import de.christoph.herocraft.lands.province.TownHall;
@@ -50,6 +51,11 @@ import de.christoph.herocraft.mysql.MySQL;
 import de.christoph.herocraft.prison.PrisonCommand;
 import de.christoph.herocraft.prison.PrisonManager;
 import de.christoph.herocraft.prison.SetPrisonSpawnPointCommand;
+import de.christoph.herocraft.onboarding.OnBoardingListener;
+import de.christoph.herocraft.onboarding.OnBoardingManager;
+import de.christoph.herocraft.onboarding.OnBoardingProtectionListener;
+import de.christoph.herocraft.onboarding.StartOnBoardingCommand;
+import de.christoph.herocraft.onboarding.CreateTutorialLandPositionCommand;
 import de.christoph.herocraft.protection.ProtectionListener;
 import de.christoph.herocraft.protection.SneakChallenge;
 import de.christoph.herocraft.quests.DailyQuest;
@@ -59,6 +65,8 @@ import de.christoph.herocraft.school.MentorCommand;
 import de.christoph.herocraft.school.MentorListener;
 import de.christoph.herocraft.school.skills.SkillManager;
 import de.christoph.herocraft.specialitems.*;
+import de.christoph.herocraft.statistics.StatisticsCommand;
+import de.christoph.herocraft.statistics.StatisticsManager;
 import de.christoph.herocraft.teleporter.Teleporter;
 import de.christoph.herocraft.tutorial.*;
 import de.christoph.herocraft.voteday.StartVoteDayCommand;
@@ -68,16 +76,21 @@ import de.christoph.herocraft.voteday.VoteDayYesCommand;
 import dev.lone.itemsadder.api.CustomStack;
 import dev.lone.itemsadder.api.ItemsAdder;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.*;
 
 public final class HeroCraft extends JavaPlugin {
 
     private static HeroCraft plugin;
+    private FileConfiguration dbConfig;
     public Coin coin;
     private MySQL mySQL;
     private MySQL shopMySQL;
@@ -114,15 +127,27 @@ public final class HeroCraft extends JavaPlugin {
     public ResidentManager residentManager;
     public ResidentGUI residentGUI;
     public OfficialManager officialManager;
+    public LandQuestManager landQuestManager;
+    public StatisticsManager statisticsManager;
+    private OnBoardingManager onBoardingManager;
 
     @Override
     public void onEnable() {
         plugin = this;
-        mySQL = new MySQL("api.pauen-it.de", 3306, "herocraft", "anyblocks", "EULVAq7WfowAv5yRhpPbsJt0c6Wfvx49");
-        shopMySQL = new MySQL("api.pauen-it.de", 3306, "shop", "anyblocks", "EULVAq7WfowAv5yRhpPbsJt0c6Wfvx49");
+        loadDatabaseConfig();
+        mySQL = createMySQLFromConfig("connections.main");
+        shopMySQL = createMySQLFromConfig("connections.shop");
+
+        if (mySQL == null || shopMySQL == null) {
+            getLogger().severe("Die Datenbank-Konfiguration in db.yml ist unvollständig. Das Plugin wird deaktiviert.");
+            Bukkit.getPluginManager().disablePlugin(this);
+            return;
+        }
+
         coin = new Coin();
         auctioneers = new Auctioneers();
         landManager = new LandManager();
+        landQuestManager = new LandQuestManager();
         voteDayManager = new VoteDayManager();
         skillManager = new SkillManager();
         homeManager = new HomeManager();
@@ -135,18 +160,22 @@ public final class HeroCraft extends JavaPlugin {
         raidManager = new RaidManager();
         dailyQuest = new DailyQuest();
         prisonManager = new PrisonManager();
+        Bukkit.getPluginManager().registerEvents(prisonManager, this);
         jobManager = new JobManager();
         jobGUI = new JobGUI();
         residentManager = new ResidentManager();
         residentGUI = new ResidentGUI();
         officialManager = new OfficialManager();
-        Bukkit.getPluginManager().registerEvents(prisonManager, this);
+        statisticsManager = new StatisticsManager();
+        onBoardingManager = new OnBoardingManager();
+        Bukkit.getPluginManager().registerEvents(statisticsManager, this);
         Bukkit.getPluginManager().registerEvents(jobManager, this);
         Bukkit.getPluginManager().registerEvents(new JobListener(), this);
         Bukkit.getPluginManager().registerEvents(jobGUI, this);
         Bukkit.getPluginManager().registerEvents(residentManager, this);
         Bukkit.getPluginManager().registerEvents(residentGUI, this);
         Bukkit.getPluginManager().registerEvents(officialManager, this);
+        Bukkit.getPluginManager().registerEvents(landQuestManager, this);
         getCommand("job").setExecutor(new JobCommand());
         getCommand("taeglichequest").setExecutor(dailyQuest);
         Bukkit.getPluginManager().registerEvents(dailyQuest, this);
@@ -198,6 +227,8 @@ public final class HeroCraft extends JavaPlugin {
         getCommand("tutorialnpc").setExecutor(new TutorialNPCCommand());
         getCommand("tutorialnein").setExecutor(new TutorialNoCommand());
         getCommand("starttutorial").setExecutor(new StartTutorialCommand());
+        getCommand("startonboarding").setExecutor(new StartOnBoardingCommand());
+        getCommand("createtutoriallandposition").setExecutor(new CreateTutorialLandPositionCommand());
         getCommand("markttutorial").setExecutor(new MarktTutorial());
         getCommand("createlandfast").setExecutor(new FastLandCreationCommand());
         getCommand("marktnein").setExecutor(new MarktNoCommand());
@@ -217,6 +248,8 @@ public final class HeroCraft extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(boosterManager, this);
         Bukkit.getPluginManager().registerEvents(new CaptainAmericaShield(), this);
         Bukkit.getPluginManager().registerEvents(new MainListener(), this);
+        Bukkit.getPluginManager().registerEvents(new OnBoardingListener(), this);
+        Bukkit.getPluginManager().registerEvents(new OnBoardingProtectionListener(), this);
         Bukkit.getPluginManager().registerEvents(new MarketCommand(), this);
         Bukkit.getPluginManager().registerEvents(new EnderchestListener(), this);
         Bukkit.getPluginManager().registerEvents(new HawkEyeBow(), this);
@@ -243,6 +276,8 @@ public final class HeroCraft extends JavaPlugin {
         BirthdayCommand birthdayCommand = new BirthdayCommand();
         getCommand("birthday").setExecutor(birthdayCommand);
         Bukkit.getPluginManager().registerEvents(birthdayCommand, this);
+
+        getCommand("statistiken").setExecutor(new StatisticsCommand());
 
         getCommand("setcasewinnings").setExecutor(new SetCaseOpeningCommand(this));
 
@@ -281,6 +316,7 @@ public final class HeroCraft extends JavaPlugin {
         getCommand("createcity").setExecutor(new CreateCityCommand());
         Bukkit.getPluginManager().registerEvents(new SpecialItemsListener(), this);
         getCommand("besondereitems").setExecutor(new SpecialItemsCommand());
+        Bukkit.getPluginManager().registerEvents(new ToolHammer(this), this);
         Bukkit.getPluginManager().registerEvents(new DuckStick(), this);
         getCommand("prison").setExecutor(new PrisonCommand());
         getCommand("freeprison").setExecutor(new FreePrisonCommand());
@@ -336,6 +372,9 @@ public final class HeroCraft extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (landQuestManager != null) {
+            landQuestManager.shutdown();
+        }
         for(Raid i : raidManager.getRaids()) {
             i.killAllRaidEntities();
             i.finishRaidFailed();
@@ -352,6 +391,51 @@ public final class HeroCraft extends JavaPlugin {
         if (residentManager != null) {
             residentManager.removeAllResidentVillagers();
         }
+
+        if (mySQL != null && mySQL.hasConnection()) {
+            mySQL.disconnect();
+        }
+
+        if (shopMySQL != null && shopMySQL.hasConnection()) {
+            shopMySQL.disconnect();
+        }
+    }
+
+    private void loadDatabaseConfig() {
+        File dbFile = new File(getDataFolder(), "db.yml");
+        if (!dbFile.exists()) {
+            saveResource("db.yml", false);
+        }
+        dbConfig = YamlConfiguration.loadConfiguration(dbFile);
+    }
+
+    private MySQL createMySQLFromConfig(String path) {
+        ConfigurationSection section = dbConfig.getConfigurationSection(path);
+        if (section == null) {
+            getLogger().severe("Fehlender Abschnitt in db.yml: " + path);
+            return null;
+        }
+
+        String host = section.getString("host");
+        int port = section.getInt("port");
+        String database = section.getString("database");
+        String user = section.getString("user");
+        String password = section.getString("password");
+
+        if (isNullOrEmpty(host)
+                || isNullOrEmpty(database)
+                || isNullOrEmpty(user)
+                || isNullOrEmpty(password)
+                || port <= 0) {
+            getLogger().severe("Ungueltige Datenbank-Konfiguration in db.yml: " + path);
+            return null;
+        }
+
+        return new MySQL(host, port, database, user, password);
+    }
+
+    private boolean isNullOrEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     public static HeroCraft getPlugin() {
@@ -425,6 +509,18 @@ public final class HeroCraft extends JavaPlugin {
 
     public OfficialManager getOfficialManager() {
         return officialManager;
+    }
+
+    public LandQuestManager getLandQuestManager() {
+        return landQuestManager;
+    }
+
+    public StatisticsManager getStatisticsManager() {
+        return statisticsManager;
+    }
+
+    public OnBoardingManager getOnBoardingManager() {
+        return onBoardingManager;
     }
 
 }

@@ -32,7 +32,8 @@
 /*     */ import org.bukkit.event.block.BlockPlaceEvent;
 /*     */ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 /*     */ import org.bukkit.event.hanging.HangingBreakByEntityEvent;
-/*     */ import org.bukkit.event.player.PlayerInteractEntityEvent;
+/*     */ import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 /*     */ import org.bukkit.event.player.PlayerInteractEvent;
 /*     */ import org.bukkit.event.player.PlayerMoveEvent;
 /*     */ import org.bukkit.entity.ArmorStand;
@@ -122,6 +123,7 @@
         /*     */
         /* 117 */     HeroCraft.getPlugin().getLandManager().getAllLands().add(land);
         /* 118 */     HeroCraft.getPlugin().getLandManager().saveLand(land);
+        /* 119 */     HeroCraft.getPlugin().getStatisticsManager().markLandCreated(player.getUniqueId());
         /* 119 */     player.sendMessage("§e§lAnyBlocks §7§l| §7Sehr gut, du besitzt nun dein eigenes Land!");
         /*     */   }
     /*     */
@@ -667,6 +669,32 @@
             /* 684 */       event.setCancelled(true);
         /*     */   }
     /*     */
+
+
+    @EventHandler
+    public void onArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
+        Player player = event.getPlayer();
+        Location loc = event.getRightClicked().getLocation();
+        // Prüfe, ob die Location in einer Danger Zone ist
+        if (!LandManager.getLandAtLocation(player.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands()).canBuild(player)) {
+            event.setCancelled(true);
+            player.sendMessage("§cDu darfst hier keine Rüstungsständer bearbeiten!");
+        }
+    }
+
+    @EventHandler
+    public void onPlayerInteractFrameEntity(PlayerInteractEntityEvent event) {
+        if (event.getRightClicked() instanceof ItemFrame) {
+            Player player = event.getPlayer();
+            Location loc = event.getRightClicked().getLocation();
+            // Prüfe, ob die Location in einer Danger Zone ist
+            if (!LandManager.getLandAtLocation(player.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands()).canBuild(player)) {
+                event.setCancelled(true);
+                player.sendMessage("§cDu darfst hier keine Item Frames bearbeiten!");
+            }
+        }
+    }
+
     /*     */
     /*     */
     /*     */

@@ -94,6 +94,7 @@ public class DimensionManager implements Listener {
             return;
         if(!event.getCurrentItem().getItemMeta().hasDisplayName())
             return;
+        event.setCancelled(true);
         String displayName = event.getCurrentItem().getItemMeta().getDisplayName();
         String name = displayName.substring(4);
         Dimension dimension = getDimensionByName(name);
@@ -123,7 +124,7 @@ public class DimensionManager implements Listener {
         } else if(dimension.getWorld().contains("blackDessert")) {
             player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), -99, 69, 196));
         } else if(dimension.getWorld().contains("world")) {
-            player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), 77.5, 88.5, -229.5, -90F, 0.7F));
+            player.teleport(new Location(Bukkit.getWorld("world"), 69.5, 89.5, -229.5, -90F, 0.7F));
         } else {
             player.teleport(new Location(Bukkit.getWorld(dimension.getWorld()), x, y, z));
         }

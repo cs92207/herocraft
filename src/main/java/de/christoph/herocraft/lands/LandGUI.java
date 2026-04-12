@@ -112,7 +112,7 @@ public class LandGUI implements CommandExecutor, Listener {
             player.sendMessage(Constant.PREFIX + "§7Land verlassen.");
             if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
                 player.sendTitle("§a§lBefreit", "§7Du bist nun nicht mehr im Gefängnis");
-                player.teleport(new Location(Bukkit.getWorld("world"), 77.5, 88.5, -229.5, -90F, 0.7F));
+                player.teleport(new Location(Bukkit.getWorld("world"), 69.5, 89.5, -229.5, -90F, 0.7F));
                 Prison prison = HeroCraft.getPlugin().prisonManager.prisonPlayers.get(player);
                 prison.setObsidianAmount(0);
                 HeroCraft.getPlugin().prisonManager.prisonPlayers.remove(player);

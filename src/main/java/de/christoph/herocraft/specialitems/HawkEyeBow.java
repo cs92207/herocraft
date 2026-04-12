@@ -38,6 +38,10 @@ public class HawkEyeBow implements Listener {
             return;
         if(ProtectionListener.isInDangerZone(player.getLocation()))
             return;
+        if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
+            player.sendMessage(Constant.PREFIX + "§7Du darfst im Gefängnis nur §e§lObsidian §7abbauen. Oder verlasse dein Land §0(§e/land§0)§7.");
+            return;
+        }
         if(event.getAction() != Action.RIGHT_CLICK_AIR)
         if(hawkEyePlayers.containsKey(player))
             chooseNewMode(hawkEyePlayers.get(player), player);

@@ -3,6 +3,7 @@ package de.christoph.herocraft.protection;
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.basiccommands.SpawnCommand;
 import de.christoph.herocraft.basiccommands.VanishCommand;
+import de.christoph.herocraft.dimensions.Dimension;
 import de.christoph.herocraft.lands.Land;
 import de.christoph.herocraft.lands.LandManager;
 import de.christoph.herocraft.scoreboard.ScoreboardManager;
@@ -12,11 +13,14 @@ import dev.lone.itemsadder.api.CustomStack;
 import dev.lone.itemsadder.api.Events.FurnitureBreakEvent;
 import dev.lone.itemsadder.api.ItemsAdder;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Pig;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -31,18 +35,49 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class ProtectionListener implements Listener {
+
+    private static final String DARK_DESSERT_PORTAL_WORLD = "world";
+    private static final double DARK_DESSERT_PORTAL_X = 188;
+    private static final double DARK_DESSERT_PORTAL_Y = 54;
+    private static final double DARK_DESSERT_PORTAL_Z = -178;
+    private static final double DARK_DESSERT_PORTAL_RADIUS_SQUARED = 9;
+    private static final String HOT_DESSERT_PORTAL_WORLD = "world";
+    private static final double HOT_DESSERT_PORTAL_X = 189;
+    private static final double HOT_DESSERT_PORTAL_Y = 53;
+    private static final double HOT_DESSERT_PORTAL_Z = -192;
+    private static final double HOT_DESSERT_PORTAL_RADIUS_SQUARED = 9;
+    private static final String NETHER_PORTAL_WORLD = "world";
+    private static final double NETHER_PORTAL_X = 189;
+    private static final double NETHER_PORTAL_Y = 54;
+    private static final double NETHER_PORTAL_Z = -164;
+    private static final double NETHER_PORTAL_RADIUS_SQUARED = 9;
+    private static final String END_PORTAL_WORLD = "world";
+    private static final double END_PORTAL_X = 160;
+    private static final double END_PORTAL_Y = 54;
+    private static final double END_PORTAL_Z = -164;
+    private static final double END_PORTAL_RADIUS_SQUARED = 9;
+    private static final String NATURE_ADVENTURE_PORTAL_WORLD = "world";
+    private static final double NATURE_ADVENTURE_PORTAL_X = 160;
+    private static final double NATURE_ADVENTURE_PORTAL_Y = 53;
+    private static final double NATURE_ADVENTURE_PORTAL_Z = -192;
+    private static final double NATURE_ADVENTURE_PORTAL_RADIUS_SQUARED = 9;
+    private static final String RANDOM_TP_PORTAL_WORLD = "world";
+    private static final double RANDOM_TP_PORTAL_X = 160;
+    private static final double RANDOM_TP_PORTAL_Y = 54;
+    private static final double RANDOM_TP_PORTAL_Z = -178;
+    private static final double RANDOM_TP_PORTAL_RADIUS_SQUARED = 9;
+    private static final double MAIN_SPAWN_X = 69.5;
+    private static final double MAIN_SPAWN_Y = 89.5;
+    private static final double MAIN_SPAWN_Z = -229.5;
+    private static final float MAIN_SPAWN_YAW = -90F;
+    private static final float MAIN_SPAWN_PITCH = 0.7F;
 
 
     // Probieren: Regierungsgebäude Land erstellen, Teleporter Item
     // Machen: Land erstellen per FastLandCreationCommand verbessern mit Regierungsgebäude platzieren und Location aussuchen
-
-
-
-
-
-
 
 
     @EventHandler
@@ -50,23 +85,31 @@ public class ProtectionListener implements Listener {
         if (!(event.getEntity().getShooter() instanceof Player)) return;
         Player player = (Player) event.getEntity().getShooter();
         ItemStack item = player.getInventory().getItemInMainHand();
-        if(item.getType().equals(Material.WIND_CHARGE)) {
-            event.setCancelled(true);
-            player.sendMessage(Constant.PREFIX + "§7Du darfst die §cWindkugel §7nicht werfen!");
+        ItemStack second = player.getInventory().getItemInOffHand();
+        if(item.getType().equals(Material.WIND_CHARGE) || second.getType().equals(Material.WIND_CHARGE)) {
+            if(isInDangerZone(player.getLocation())) {
+                event.setCancelled(true);
+                player.sendMessage(Constant.PREFIX + "§7Du darfst die §cWindkugel §7nicht werfen!");
+                return;
+            }
+            Land land = LandManager.getLandAtLocation(player.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+            if(land == null) {
+                return;
+            }
+            if(!land.canBuild(player)) {
+                event.setCancelled(true);
+                player.sendMessage(Constant.PREFIX + "§7Du darfst die §cWindkugel §7nicht werfen!");
+            }
         }
     }
-
-
-
-
 
 
     private static boolean isInSpawn(Location location) {
         if(!location.getWorld().getName().equalsIgnoreCase("world")) {
             return false;
         }
-        if(location.getX() >= 20 && location.getX() <= 270) {
-            if(location.getZ() <= -105 && location.getZ() >= -327) {
+        if(location.getX() >= 50 && location.getX() <= 340) {
+            if(location.getZ() <= -60 && location.getZ() >= -410) {
                 return true;
             }
         }
@@ -129,12 +172,127 @@ public class ProtectionListener implements Listener {
     }
 
     @EventHandler
+    public void onPlayerInteractShelf(PlayerInteractEvent event) {
+        // Nur Rechts- oder Linksklick auf Block prüfen
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.LEFT_CLICK_BLOCK) {
+            Block block = event.getClickedBlock();
+            if (block != null) {
+                // Prüfen, ob der Block ein Regal ist
+                String type = block.getType().toString();
+                if(type.contains("SHELF") || type.contains("shelf")) {
+                    if(isInSpawn(block.getLocation())) {
+                        if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+                            event.setCancelled(true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerInteractFrame(PlayerInteractEvent event) {
+        // Nur Rechts- oder Linksklick auf Block prüfen
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.LEFT_CLICK_BLOCK) {
+            Block block = event.getClickedBlock();
+            if (block != null) {
+                // Prüfen, ob der Block ein Regal ist
+                if(block.getType() == Material.ITEM_FRAME) {
+                    if(isInSpawn(block.getLocation())) {
+                        if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+                            event.setCancelled(true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerInteractFrameEntity(PlayerInteractEntityEvent event) {
+        if (event.getRightClicked() instanceof ItemFrame) {
+            Player player = event.getPlayer();
+            Location loc = event.getRightClicked().getLocation();
+            // Prüfe, ob die Location in einer Danger Zone ist
+            if (isInSpawn(player.getLocation())) {
+                event.setCancelled(true);
+                player.sendMessage("§cDu darfst hier keine Item Frames bearbeiten!");
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        // Prüfen, ob die Aktion ein Rechtsklick auf einen Block ist
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            Block block = event.getClickedBlock();
+
+            if (block != null) {
+                // Prüfen, ob es sich um eine Trapdoor handelt
+                Material type = block.getType();
+                String itemName = block.getType().toString();
+                if(itemName.contains("TRAPDOOR") || itemName.contains("FENCE")) {
+
+                    if(isInSpawn(block.getLocation())) {
+                        if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+                            event.setCancelled(true);
+                        }
+                    }
+                }
+                if (type == Material.OAK_TRAPDOOR ||
+                        type == Material.SPRUCE_TRAPDOOR ||
+                        type == Material.BIRCH_TRAPDOOR ||
+                        type == Material.JUNGLE_TRAPDOOR ||
+                        type == Material.ACACIA_TRAPDOOR ||
+                        type == Material.DARK_OAK_TRAPDOOR ||
+                        type == Material.MANGROVE_TRAPDOOR ||
+                        type == Material.CHERRY_TRAPDOOR ||
+                        type == Material.BAMBOO_TRAPDOOR ||
+                        type == Material.CRIMSON_TRAPDOOR ||
+                        type == Material.WARPED_TRAPDOOR ||
+                        type == Material.IRON_TRAPDOOR ||
+
+                        type == Material.COPPER_TRAPDOOR ||
+                        type == Material.EXPOSED_COPPER_TRAPDOOR ||
+                        type == Material.WEATHERED_COPPER_TRAPDOOR ||
+                        type == Material.OXIDIZED_COPPER_TRAPDOOR ||
+                        type == Material.WAXED_COPPER_TRAPDOOR ||
+                        type == Material.WAXED_EXPOSED_COPPER_TRAPDOOR ||
+                        type == Material.WAXED_WEATHERED_COPPER_TRAPDOOR ||
+                        type == Material.WAXED_OXIDIZED_COPPER_TRAPDOOR ||
+                        type == Material.OAK_FENCE ||
+                        type == Material.SPRUCE_FENCE ||
+                        type == Material.BIRCH_FENCE ||
+                        type == Material.JUNGLE_FENCE ||
+                        type == Material.ACACIA_FENCE ||
+                        type == Material.DARK_OAK_FENCE ||
+                        type == Material.MANGROVE_FENCE ||
+                        type == Material.CHERRY_FENCE ||
+                        type == Material.BAMBOO_FENCE ||
+                        type == Material.CRIMSON_FENCE ||
+                        type == Material.WARPED_FENCE ||
+                        type == Material.NETHER_BRICK_FENCE
+
+                ) {
+
+                    if(isInSpawn(block.getLocation())) {
+                        if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+                            event.setCancelled(true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
     public void onCreatureSpawnEvent(CreatureSpawnEvent event) {
         if(isInDangerZone(event.getLocation())) {
             if(event.getSpawnReason().equals(CreatureSpawnEvent.SpawnReason.NATURAL))
                 event.setCancelled(true);
         }
     }
+
 
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
@@ -391,14 +549,14 @@ public class ProtectionListener implements Listener {
         //    player.sendMessage("§e§lHeroWars §7§l| §7Du bist Zuschauer.");
         //}
         if(!HeroCraft.getPlugin().getConfig().contains("Joined." + event.getPlayer().getUniqueId().toString())) {
-            player.teleport(new Location(Bukkit.getWorld("world"), 77.5, 88.5, -229.5, -90F, 0.7F));
+            player.teleport(new Location(Bukkit.getWorld("world"), 69.5, 89.5, -229.5, -90F, 0.7F));
             HeroCraft.getPlugin().getConfig().set("Joined." + event.getPlayer().getUniqueId().toString(), true);
             Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
                 @Override
                 public void run() {
                     ScoreboardManager.setScoreboard(player);
                     if(!player.getLocation().getWorld().getName().equalsIgnoreCase("world")) {
-                        player.teleport(new Location(Bukkit.getWorld("world"), 77.5, 88.5, -229.5, -90F, 0.7F));
+                        player.teleport(new Location(Bukkit.getWorld("world"), 69.5, 89.5, -229.5, -90F, 0.7F));
                     }
                 }
             }, 20);
@@ -461,13 +619,151 @@ public class ProtectionListener implements Listener {
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
+        if(event.getTo() == null)
+            return;
+        if(event.getFrom().getBlockX() == event.getTo().getBlockX() && event.getFrom().getBlockY() == event.getTo().getBlockY() && event.getFrom().getBlockZ() == event.getTo().getBlockZ())
+            return;
         if(SpawnCommand.spawnPlayers.contains(event.getPlayer())) {
             event.getPlayer().sendMessage(Constant.PREFIX + "§7Teleportation abgebrochen.");
             SpawnCommand.spawnPlayers.remove(event.getPlayer());
         }
+        teleportToSpawnIfStandingOnBlackGlass(event.getPlayer(), event.getTo());
+        teleportToDarkDessert(event.getPlayer(), event.getTo());
+        teleportToHotDessert(event.getPlayer(), event.getTo());
+        teleportToNether(event.getPlayer(), event.getTo());
+        teleportToEnd(event.getPlayer(), event.getTo());
+        teleportToNatureAdventure(event.getPlayer(), event.getTo());
+        teleportToRandomWorld(event.getPlayer(), event.getTo());
         if(!event.getPlayer().hasPermission("herowars.cc")) {
             //event.getPlayer().setGameMode(GameMode.SPECTATOR);
         }
+    }
+
+    private void teleportToDarkDessert(Player player, Location location) {
+        if(!isInDarkDessertTeleportZone(location))
+            return;
+        Dimension dimension = HeroCraft.getPlugin().getDimensionManager().getDimensionByName("Schwarze Wüste");
+        if(dimension == null)
+            return;
+        World world = Bukkit.getWorld(dimension.getWorld());
+        if(world == null)
+            return;
+        player.sendMessage(Constant.PREFIX + "§7Du wirst in die §8Schwarze Wüste §7teleportiert.");
+        player.teleport(new Location(world, -99, 69, 196));
+    }
+
+    private boolean isInDarkDessertTeleportZone(Location location) {
+        if(location.getWorld() == null || !location.getWorld().getName().equalsIgnoreCase(DARK_DESSERT_PORTAL_WORLD))
+            return false;
+        return location.distanceSquared(new Location(location.getWorld(), DARK_DESSERT_PORTAL_X, DARK_DESSERT_PORTAL_Y, DARK_DESSERT_PORTAL_Z)) <= DARK_DESSERT_PORTAL_RADIUS_SQUARED;
+    }
+
+    private void teleportToHotDessert(Player player, Location location) {
+        if(!isInHotDessertTeleportZone(location))
+            return;
+        Dimension dimension = HeroCraft.getPlugin().getDimensionManager().getDimensionByName("Heiße Wüste");
+        if(dimension == null)
+            return;
+        World world = Bukkit.getWorld(dimension.getWorld());
+        if(world == null)
+            return;
+        player.sendMessage(Constant.PREFIX + "§7Du wirst in die §6Heiße Wüste §7teleportiert.");
+        player.teleport(new Location(world, 230, 74, 77));
+    }
+
+    private boolean isInHotDessertTeleportZone(Location location) {
+        if(location.getWorld() == null || !location.getWorld().getName().equalsIgnoreCase(HOT_DESSERT_PORTAL_WORLD))
+            return false;
+        return location.distanceSquared(new Location(location.getWorld(), HOT_DESSERT_PORTAL_X, HOT_DESSERT_PORTAL_Y, HOT_DESSERT_PORTAL_Z)) <= HOT_DESSERT_PORTAL_RADIUS_SQUARED;
+    }
+
+    private void teleportToNether(Player player, Location location) {
+        if(!isInNetherTeleportZone(location))
+            return;
+        Dimension dimension = HeroCraft.getPlugin().getDimensionManager().getDimensionByName("Hölle");
+        if(dimension == null)
+            return;
+        World world = Bukkit.getWorld(dimension.getWorld());
+        if(world == null)
+            return;
+        player.sendMessage(Constant.PREFIX + "§7Du wirst in den §cNether §7teleportiert.");
+        player.teleport(new Location(world, 32, 52, 0));
+    }
+
+    private boolean isInNetherTeleportZone(Location location) {
+        if(location.getWorld() == null || !location.getWorld().getName().equalsIgnoreCase(NETHER_PORTAL_WORLD))
+            return false;
+        return location.distanceSquared(new Location(location.getWorld(), NETHER_PORTAL_X, NETHER_PORTAL_Y, NETHER_PORTAL_Z)) <= NETHER_PORTAL_RADIUS_SQUARED;
+    }
+
+    private void teleportToEnd(Player player, Location location) {
+        if(!isInEndTeleportZone(location))
+            return;
+        Dimension dimension = HeroCraft.getPlugin().getDimensionManager().getDimensionByName("Ende");
+        if(dimension == null)
+            return;
+        World world = Bukkit.getWorld(dimension.getWorld());
+        if(world == null)
+            return;
+        player.sendMessage(Constant.PREFIX + "§7Du wirst ins §5End §7teleportiert.");
+        player.teleport(new Location(world, 47, 60, 28));
+    }
+
+    private boolean isInEndTeleportZone(Location location) {
+        if(location.getWorld() == null || !location.getWorld().getName().equalsIgnoreCase(END_PORTAL_WORLD))
+            return false;
+        return location.distanceSquared(new Location(location.getWorld(), END_PORTAL_X, END_PORTAL_Y, END_PORTAL_Z)) <= END_PORTAL_RADIUS_SQUARED;
+    }
+
+    private void teleportToNatureAdventure(Player player, Location location) {
+        if(!isInNatureAdventureTeleportZone(location))
+            return;
+        Dimension dimension = HeroCraft.getPlugin().getDimensionManager().getDimensionByName("Natur Wunder");
+        if(dimension == null)
+            return;
+        World world = Bukkit.getWorld(dimension.getWorld());
+        if(world == null)
+            return;
+        player.sendMessage(Constant.PREFIX + "§7Du wirst ins §aNatur Wunder §7teleportiert.");
+        player.teleport(new Location(world, 313, 65, -53));
+    }
+
+    private boolean isInNatureAdventureTeleportZone(Location location) {
+        if(location.getWorld() == null || !location.getWorld().getName().equalsIgnoreCase(NATURE_ADVENTURE_PORTAL_WORLD))
+            return false;
+        return location.distanceSquared(new Location(location.getWorld(), NATURE_ADVENTURE_PORTAL_X, NATURE_ADVENTURE_PORTAL_Y, NATURE_ADVENTURE_PORTAL_Z)) <= NATURE_ADVENTURE_PORTAL_RADIUS_SQUARED;
+    }
+
+    private void teleportToRandomWorld(Player player, Location location) {
+        if(!isInRandomWorldTeleportZone(location))
+            return;
+        World world = Bukkit.getWorld("world");
+        if(world == null)
+            return;
+        Random random = new Random();
+        int x = random.nextInt(1000);
+        int z = random.nextInt(1000);
+        int y = world.getHighestBlockYAt(new Location(world, x, 1, z));
+        player.sendMessage(Constant.PREFIX + "§7Du wirst zufällig in der §aWorld §7teleportiert.");
+        player.teleport(new Location(world, x, y, z));
+    }
+
+    private boolean isInRandomWorldTeleportZone(Location location) {
+        if(location.getWorld() == null || !location.getWorld().getName().equalsIgnoreCase(RANDOM_TP_PORTAL_WORLD))
+            return false;
+        return location.distanceSquared(new Location(location.getWorld(), RANDOM_TP_PORTAL_X, RANDOM_TP_PORTAL_Y, RANDOM_TP_PORTAL_Z)) <= RANDOM_TP_PORTAL_RADIUS_SQUARED;
+    }
+
+    private void teleportToSpawnIfStandingOnBlackGlass(Player player, Location location) {
+        if(!isInSpawn(location))
+            return;
+        Material blockType = location.clone().subtract(0, 1, 0).getBlock().getType();
+        if(blockType != Material.BLACK_STAINED_GLASS && blockType != Material.BLACK_STAINED_GLASS_PANE)
+            return;
+        World world = Bukkit.getWorld("world");
+        if(world == null)
+            return;
+        player.teleport(new Location(world, MAIN_SPAWN_X, MAIN_SPAWN_Y, MAIN_SPAWN_Z, MAIN_SPAWN_YAW, MAIN_SPAWN_PITCH));
     }
 
     private void sendChallenge(Player player) {

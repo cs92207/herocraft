@@ -66,6 +66,16 @@ public class Official {
     public void incrementSalaryCount() { this.salaryCount++; }
     
     /**
+     * Setzt die neue Location des Beamten (für Umsetzen)
+     */
+    public void setLocation(double x, double y, double z, String world) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.world = world;
+    }
+    
+    /**
      * Berechnet das aktuelle Gehalt (steigend)
      */
     public double getCurrentSalary() {

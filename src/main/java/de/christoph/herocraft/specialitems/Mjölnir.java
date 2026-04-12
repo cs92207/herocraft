@@ -60,7 +60,10 @@ public class Mjölnir implements Listener {
             player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1, 3);
         } else if(event.getAction() == Action.LEFT_CLICK_AIR) {
             Land land = LandManager.getLandAtLocation(player.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+            Province province = ProvinceManager.getProvinceAtLocation(player.getLocation(), HeroCraft.getPlugin().getProvinceManager().getProvinces());
             if(land != null && !land.canBuild(player))
+                return;
+            if(province != null && !province.canBuild(player))
                 return;
             mjölnirThrow(player);
         }

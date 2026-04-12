@@ -119,6 +119,8 @@ commands:
   tutorialnpc:
   tutorialnein:
   starttutorial:
+  startonboarding:
+  createtutoriallandposition:
   markttutorial:
   marktnein:
   startmehrinfos:
@@ -142,3 +144,7 @@ commands:
     aliases:
       - jobs
       - beruf
+  statistiken:
+    aliases:
+      - stats
+      - statistik

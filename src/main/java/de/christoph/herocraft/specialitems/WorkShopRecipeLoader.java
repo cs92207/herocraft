@@ -24,6 +24,16 @@ public class WorkShopRecipeLoader {
         loadDarkWeaponRecipe();
         loadNatureSwordRecipe();
         loadSandstormRecipe();
+        loadToolHammerRecipe();
+    }
+
+    private void loadToolHammerRecipe() {
+        ShapedRecipe pistolRecipe = new ShapedRecipe(getItemsAdderItem("§4§lHammer"));
+        pistolRecipe.shape("BMB", "AOA", "AOA");
+        pistolRecipe.setIngredient('B', Material.BEACON);
+        pistolRecipe.setIngredient('M', Material.MACE);
+        pistolRecipe.setIngredient('O', Material.OBSIDIAN);
+        Bukkit.addRecipe(pistolRecipe);
     }
 
     private void loadScaleStickRecipe() {

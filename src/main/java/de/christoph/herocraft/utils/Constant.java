@@ -83,7 +83,7 @@ public class Constant {
     public static final double BUDDING_AMETHYIST = 100000;
     public static final double DRAGON_EGG = 100000;
 
-    public static final double TROPICAL_SELL_PRICE = 6*16;
+    public static final double TROPICAL_SELL_PRICE = 60.0;
     public static final double PUFFER_BUY_PRICE = 40.0;
     public static final double PUFFER_SELL_PRICE = 0.125;
 
@@ -268,7 +268,7 @@ public class Constant {
     public static final double MANGROVE_LOG_SELL_PRICE = 0.5;
 
 
-    public static final double TROPICAL_PRICE = 1000;
+    public static final double TROPICAL_PRICE = 5000;
     public static final double COOKED_COD_PRICE = 110;
     public static final double COOKED_SALMON_PRICE = 60;
 

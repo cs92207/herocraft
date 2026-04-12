@@ -22,6 +22,7 @@ public class Coin {
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 double coins = resultSet.getDouble("value");
+                coins = Math.round(coins * 100.0) / 100.0;
                 return coins;
             }
         } catch (SQLException e) {

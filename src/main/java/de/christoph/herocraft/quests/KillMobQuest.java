@@ -18,6 +18,7 @@ public class KillMobQuest implements Quest {
 
     public void onKill(EntityType killed) {
         if (killed == type) {
+            System.out.println("Getötet.................");
             setProgress(current + 1);
         }
     }

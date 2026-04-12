@@ -3,9 +3,7 @@ package de.christoph.herocraft.caseopening;
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.utils.Constant;
 import de.christoph.herocraft.utils.ItemBuilder;
-import dev.lone.itemsadder.api.Events.FurnitureBreakEvent;
 import dev.lone.itemsadder.api.Events.FurnitureInteractEvent;
-import io.lumine.mythic.bukkit.utils.lib.jooq.SQL;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -29,16 +27,22 @@ import java.util.UUID;
 
 public class CaseOpeningListener implements Listener {
 
-    public static HashMap<Player, Integer> pagePlayers = new HashMap<>();
+    public static HashMap<UUID, CaseInventoryState> pagePlayers = new HashMap<>();
+
+    public CaseOpeningListener() {
+        createCaseTableIfNeeded(CaseType.NORMAL);
+        createCaseTableIfNeeded(CaseType.PREMIUM);
+    }
 
 
     @EventHandler
     public void onNormalCaseClick(FurnitureInteractEvent event) {
         Player player = event.getPlayer();
-        if(event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lInventar") || event.getFurniture().getDisplayName().equalsIgnoreCase("§4§lMobiles Kisten Gewinnspiel")) {
-            event.setCancelled(true);
-            openPage(player, 0);
-        }
+        CaseType caseType = CaseType.fromFurnitureDisplayName(event.getFurniture().getDisplayName());
+        if(caseType == null)
+            return;
+        event.setCancelled(true);
+        openPage(player, 0, caseType);
     }
 
     @EventHandler
@@ -49,7 +53,8 @@ public class CaseOpeningListener implements Listener {
         if(!event.getView().getTitle().equalsIgnoreCase(":offset_-16::survivallands_chests:"))
             return;
         event.setCancelled(true);
-        if(!pagePlayers.containsKey(player))
+        CaseInventoryState inventoryState = pagePlayers.get(player.getUniqueId());
+        if(inventoryState == null)
             return;
         if(event.getCurrentItem() == null)
             return;
@@ -58,47 +63,52 @@ public class CaseOpeningListener implements Listener {
         if(!event.getCurrentItem().getItemMeta().hasDisplayName())
             return;
         if(event.getCurrentItem().getItemMeta().getDisplayName().equalsIgnoreCase("§4§lZurück")) {
-            if(pagePlayers.get(player) <= 0)
+            if(inventoryState.page <= 0)
                 return;
-            openPage(player, pagePlayers.get(player) - 1);
+            openPage(player, inventoryState.page - 1, inventoryState.caseType);
         } else if(event.getCurrentItem().getItemMeta().getDisplayName().equalsIgnoreCase("§4§lNächste Seite")) {
-            List<ItemStack> winnings = SetCaseOpeningCommand.loadInventory();
-            int maxPages = winnings.size() / 40;
-            maxPages++;
-            if(pagePlayers.get(player) >= maxPages)
+            List<ItemStack> winnings = SetCaseOpeningCommand.loadInventory(inventoryState.caseType);
+            int maxPages = winnings.isEmpty() ? 0 : (winnings.size() - 1) / 40;
+            if(inventoryState.page >= maxPages)
                 return;
-            openPage(player, pagePlayers.get(player) + 1);
+            openPage(player, inventoryState.page + 1, inventoryState.caseType);
         } else if(event.getCurrentItem().getItemMeta().getDisplayName().equalsIgnoreCase("§4§lKiste öffnen")) {
-            int chests = getChestsFromPlayer(player);
+            int chests = getChestsFromPlayer(player, inventoryState.caseType);
             if(chests <= 0) {
-                player.sendMessage(Constant.PREFIX + "§7Du hast keine §cSurvivalLands Kisten §7mehr. Kaufe sie im §a/survivallandsshop§7.");
+                player.sendMessage(Constant.PREFIX + "§7Du hast keine §c" + inventoryState.caseType.getPluralDisplayName() + " §7mehr.");
                 return;
             }
-            List<ItemStack> winnings = SetCaseOpeningCommand.loadInventory();
-            int progress = getProgressFromPlayer(player);
-            if(winnings.size() < progress) {
+            List<ItemStack> winnings = SetCaseOpeningCommand.loadInventory(inventoryState.caseType);
+            int progress = getProgressFromPlayer(player, inventoryState.caseType);
+            int nextIndex = progress + 1;
+            if(nextIndex < 0 || nextIndex >= winnings.size()) {
                 player.sendMessage(Constant.PREFIX + "§7Du hast keine offenen Belohnungen mehr. Warte bis nächsten Monat.");
                 return;
             }
-            player.getInventory().addItem(winnings.get(progress + 1));
-            setProgressFromPlayer(player, progress + 1);
-            setChestsForPlayer(player, chests - 1);
+            player.getInventory().addItem(winnings.get(nextIndex));
+            setProgressFromPlayer(player, nextIndex, inventoryState.caseType);
+            setChestsForPlayer(player, chests - 1, inventoryState.caseType);
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-            player.sendMessage(Constant.PREFIX + "§7Du hast eine §aSurvivalLands Kiste §7geöffnet.");
+            player.sendMessage(Constant.PREFIX + "§7Du hast eine §a" + inventoryState.caseType.getSingularDisplayName() + " §7geöffnet.");
         }
     }
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
-        pagePlayers.remove(event.getPlayer());
+        pagePlayers.remove(event.getPlayer().getUniqueId());
     }
 
-    public void openPage(Player player, int page) {
-        pagePlayers.put(player, page);
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        pagePlayers.remove(event.getPlayer().getUniqueId());
+    }
+
+    public void openPage(Player player, int page, CaseType caseType) {
+        pagePlayers.put(player.getUniqueId(), new CaseInventoryState(page, caseType));
         Inventory inventory = Bukkit.createInventory(null, 9*5, ":offset_-16::survivallands_chests:");
-        List<ItemStack> winningItems = SetCaseOpeningCommand.loadInventory();
-        int progress = getProgressFromPlayer(player);
+        List<ItemStack> winningItems = SetCaseOpeningCommand.loadInventory(caseType);
+        int progress = getProgressFromPlayer(player, caseType);
         int n = page * 40;
         for(int i = n; i < n + 40; i++) {
             ItemStack itemStack;
@@ -127,7 +137,8 @@ public class CaseOpeningListener implements Listener {
         openMeta.setDisplayName("§4§lKiste öffnen");
         ArrayList<String> lore = new ArrayList<>();
         lore.add("");
-        lore.add("§7Deine Kisten: §e" + getChestsFromPlayer(player));
+        lore.add("§7Typ: §e" + caseType.getSingularDisplayName());
+        lore.add("§7Deine Kisten: §e" + getChestsFromPlayer(player, caseType));
         lore.add("");
         lore.add("§0(§7Rechtsklick zum öffnen§0)");
         openMeta.setLore(lore);
@@ -139,15 +150,15 @@ public class CaseOpeningListener implements Listener {
         player.openInventory(inventory);
     }
 
-    public static void setProgressFromPlayer(Player player, int amount) {
+    public static void setProgressFromPlayer(Player player, int amount, CaseType caseType) {
         try {
             PreparedStatement preparedStatement;
-            if(isInProgressDatabase(player)) {
-                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("UPDATE `survivalland_cases_progresses` SET `progress` = ? WHERE `uuid` = ?");
+            if(isInProgressDatabase(player, caseType)) {
+                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("UPDATE `" + caseType.getProgressTable() + "` SET `progress` = ? WHERE `uuid` = ?");
                 preparedStatement.setInt(1, amount);
                 preparedStatement.setString(2, player.getUniqueId().toString());
             } else {
-                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("INSERT INTO `survivalland_cases_progresses` (`uuid`, `progress`) VALUES (?,?)");
+                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("INSERT INTO `" + caseType.getProgressTable() + "` (`uuid`, `progress`) VALUES (?,?)");
                 preparedStatement.setString(1, player.getUniqueId().toString());
                 preparedStatement.setInt(2, amount);
             }
@@ -157,9 +168,9 @@ public class CaseOpeningListener implements Listener {
         }
     }
 
-    public static boolean isInProgressDatabase(Player player) {
+    public static boolean isInProgressDatabase(Player player, CaseType caseType) {
         try {
-            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT * FROM `survivalland_cases_progresses` WHERE `uuid` = ?");
+            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT * FROM `" + caseType.getProgressTable() + "` WHERE `uuid` = ?");
             preparedStatement.setString(1, player.getUniqueId().toString());
             ResultSet resultSet = preparedStatement.executeQuery();
             return resultSet.next();
@@ -169,9 +180,9 @@ public class CaseOpeningListener implements Listener {
         return false;
     }
 
-    public static int getProgressFromPlayer(Player player) {
+    public static int getProgressFromPlayer(Player player, CaseType caseType) {
         try {
-            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT * FROM `survivalland_cases_progresses` WHERE `uuid` = ?");
+            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT * FROM `" + caseType.getProgressTable() + "` WHERE `uuid` = ?");
             preparedStatement.setString(1, player.getUniqueId().toString());
             ResultSet resultSet = preparedStatement.executeQuery();
             return resultSet.next() ? resultSet.getInt("progress") : -1;
@@ -181,9 +192,9 @@ public class CaseOpeningListener implements Listener {
         return 0;
     }
 
-    public boolean isInDatabase(Player player) {
+    public boolean isInDatabase(Player player, CaseType caseType) {
         try {
-            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT `amount` FROM `survivalland_cases` WHERE `uuid` = ?");
+            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT `amount` FROM `" + caseType.getChestTable() + "` WHERE `uuid` = ?");
             preparedStatement.setString(1, player.getUniqueId().toString());
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next())
@@ -194,9 +205,9 @@ public class CaseOpeningListener implements Listener {
         return false;
     }
 
-    public int getChestsFromPlayer(Player player) {
+    public int getChestsFromPlayer(Player player, CaseType caseType) {
         try {
-            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT `amount` FROM `survivalland_cases` WHERE `uuid` = ?");
+            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT `amount` FROM `" + caseType.getChestTable() + "` WHERE `uuid` = ?");
             preparedStatement.setString(1, player.getUniqueId().toString());
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next())
@@ -207,21 +218,54 @@ public class CaseOpeningListener implements Listener {
         return 0;
     }
 
-    public void setChestsForPlayer(Player player, int amount) {
+    public void setChestsForPlayer(Player player, int amount, CaseType caseType) {
         try {
             PreparedStatement preparedStatement;
-            if(isInDatabase(player)) {
-                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("UPDATE `survivalland_cases` SET `amount` = ? WHERE `uuid` = ?");
+            if(isInDatabase(player, caseType)) {
+                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("UPDATE `" + caseType.getChestTable() + "` SET `amount` = ? WHERE `uuid` = ?");
                 preparedStatement.setInt(1, amount);
                 preparedStatement.setString(2, player.getUniqueId().toString());
             } else {
-                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("INSERT INTO `survivalland_cases` (`uuid`,`amount`) VALUES (?,?)");
+                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("INSERT INTO `" + caseType.getChestTable() + "` (`uuid`,`amount`) VALUES (?,?)");
                 preparedStatement.setString(1, player.getUniqueId().toString());
                 preparedStatement.setInt(2, amount);
             }
             preparedStatement.execute();
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void createCaseTableIfNeeded(CaseType caseType) {
+        try {
+            PreparedStatement chestTableStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement(
+                    "CREATE TABLE IF NOT EXISTS `" + caseType.getChestTable() + "` (" +
+                            "`uuid` VARCHAR(36) NOT NULL PRIMARY KEY," +
+                            "`amount` INT NOT NULL DEFAULT 0" +
+                            ")"
+            );
+            chestTableStatement.execute();
+
+            PreparedStatement progressTableStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement(
+                    "CREATE TABLE IF NOT EXISTS `" + caseType.getProgressTable() + "` (" +
+                            "`uuid` VARCHAR(36) NOT NULL PRIMARY KEY," +
+                            "`progress` INT NOT NULL DEFAULT -1" +
+                            ")"
+            );
+            progressTableStatement.execute();
+        } catch (SQLException e) {
+            System.out.println("[HeroCraft] Fehler beim Erstellen der Tabellen für " + caseType.getConfigKey() + "e Kisten: " + e.getMessage());
+        }
+    }
+
+    private static class CaseInventoryState {
+
+        private final int page;
+        private final CaseType caseType;
+
+        private CaseInventoryState(int page, CaseType caseType) {
+            this.page = page;
+            this.caseType = caseType;
         }
     }
 

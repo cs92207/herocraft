@@ -1,0 +1,13 @@
+connections:
+  main:
+    host: api.pauen-it.de
+    port: 3306
+    database: herocraft
+    user: anyblocks
+    password: EULVAq7WfowAv5yRhpPbsJt0c6Wfvx49
+  shop:
+    host: api.pauen-it.de
+    port: 3306
+    database: shop
+    user: anyblocks
+    password: EULVAq7WfowAv5yRhpPbsJt0c6Wfvx49

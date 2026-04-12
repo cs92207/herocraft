@@ -18,6 +18,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -34,10 +35,13 @@ public class OfficialManager implements Listener {
 
     private Connection connection;
     private HashMap<String, Official> officials;
+    // HashMap um zu tracken, welche Spieler gerade einen Official umsetzen wollen
+    private HashMap<String, Official> relocatingOfficials; // UUID -> Official
 
     public OfficialManager() {
         this.connection = HeroCraft.getPlugin().getMySQL().getConnection();
         this.officials = new HashMap<>();
+        this.relocatingOfficials = new HashMap<>();
         createTable();
         addMissingColumns();
         loadOfficials();
@@ -121,28 +125,8 @@ public class OfficialManager implements Listener {
         villager.setAI(false);
         villager.setGravity(false);
 
-        // 🔴 ROTE LEDERRÜSTUNG
-        EntityEquipment eq = villager.getEquipment();
-        if (eq != null) {
-            if(type.equalsIgnoreCase("DOCTOR")) {
-                eq.setChestplate(createPinkLeatherArmor(Material.LEATHER_CHESTPLATE));
-                eq.setLeggings(createPinkLeatherArmor(Material.LEATHER_LEGGINGS));
-                eq.setBoots(createPinkLeatherArmor(Material.LEATHER_BOOTS));
-            } else if(type.equalsIgnoreCase("POLICE")) {
-                eq.setChestplate(createBlueLeatherArmor(Material.LEATHER_CHESTPLATE));
-                eq.setLeggings(createBlueLeatherArmor(Material.LEATHER_LEGGINGS));
-                eq.setBoots(createBlueLeatherArmor(Material.LEATHER_BOOTS));
-            } else {
-                eq.setChestplate(createRedLeatherArmor(Material.LEATHER_CHESTPLATE));
-                eq.setLeggings(createRedLeatherArmor(Material.LEATHER_LEGGINGS));
-                eq.setBoots(createRedLeatherArmor(Material.LEATHER_BOOTS));
-            }
-            // nichts droppen lassen
-            eq.setHelmetDropChance(0.0f);
-            eq.setChestplateDropChance(0.0f);
-            eq.setLeggingsDropChance(0.0f);
-            eq.setBootsDropChance(0.0f);
-        }
+        // Rüstung anziehen
+        equipeOfficialArmor(villager, type);
 
         officials.put(official.getLocationKey(), official);
         saveOfficialToDatabase(official);
@@ -181,6 +165,30 @@ public class OfficialManager implements Listener {
         return item;
     }
 
+    private void equipeOfficialArmor(Husk villager, String type) {
+        EntityEquipment eq = villager.getEquipment();
+        if (eq != null) {
+            if(type.equalsIgnoreCase("DOCTOR")) {
+                eq.setChestplate(createPinkLeatherArmor(Material.LEATHER_CHESTPLATE));
+                eq.setLeggings(createPinkLeatherArmor(Material.LEATHER_LEGGINGS));
+                eq.setBoots(createPinkLeatherArmor(Material.LEATHER_BOOTS));
+            } else if(type.equalsIgnoreCase("POLICE")) {
+                eq.setChestplate(createBlueLeatherArmor(Material.LEATHER_CHESTPLATE));
+                eq.setLeggings(createBlueLeatherArmor(Material.LEATHER_LEGGINGS));
+                eq.setBoots(createBlueLeatherArmor(Material.LEATHER_BOOTS));
+            } else {
+                eq.setChestplate(createRedLeatherArmor(Material.LEATHER_CHESTPLATE));
+                eq.setLeggings(createRedLeatherArmor(Material.LEATHER_LEGGINGS));
+                eq.setBoots(createRedLeatherArmor(Material.LEATHER_BOOTS));
+            }
+            // nichts droppen lassen
+            eq.setHelmetDropChance(0.0f);
+            eq.setChestplateDropChance(0.0f);
+            eq.setLeggingsDropChance(0.0f);
+            eq.setBootsDropChance(0.0f);
+        }
+    }
+
     private void spawnOfficialVillager(Official official) {
         org.bukkit.World world = Bukkit.getWorld(official.getWorld());
         if (world == null) {
@@ -213,6 +221,7 @@ public class OfficialManager implements Listener {
                     villager.setRemoveWhenFarAway(false);
                     villager.setAI(false);
                     villager.setGravity(false);
+                    equipeOfficialArmor(villager, official.getType());
                     return;
                 }
             }
@@ -227,6 +236,7 @@ public class OfficialManager implements Listener {
             villager.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 500));
             villager.setAI(false);
             villager.setGravity(false);
+            equipeOfficialArmor(villager, official.getType());
         } catch (Exception e) {
             System.out.println("[HeroCraft] Fehler beim Spawnen des Beamten-Villagers bei " + location.toString() + ": " + e.getMessage());
             e.printStackTrace();
@@ -235,24 +245,54 @@ public class OfficialManager implements Listener {
 
     private void saveOfficialToDatabase(Official official) {
         try {
-            PreparedStatement preparedStatement = connection.prepareStatement(
-                    "INSERT INTO `land_officials` (`land_name`, `x`, `y`, `z`, `world`, `type`, `last_salary_time`, `salary_count`) " +
-                            "VALUES (?,?,?,?,?,?,?,?) " +
-                            "ON DUPLICATE KEY UPDATE `last_salary_time` = ?, `salary_count` = ?"
+            // Prüfe zunächst ob der Official bereits existiert
+            PreparedStatement checkStmt = connection.prepareStatement(
+                    "SELECT COUNT(*) as count FROM `land_officials` WHERE `world` = ? AND `x` = ? AND `y` = ? AND `z` = ?"
             );
-            preparedStatement.setString(1, official.getLandName());
-            preparedStatement.setDouble(2, official.getX());
-            preparedStatement.setDouble(3, official.getY());
-            preparedStatement.setDouble(4, official.getZ());
-            preparedStatement.setString(5, official.getWorld());
-            preparedStatement.setString(6, official.getType());
-            preparedStatement.setLong(7, official.getLastSalaryTime());
-            preparedStatement.setInt(8, official.getSalaryCount());
-            preparedStatement.setLong(9, official.getLastSalaryTime());
-            preparedStatement.setInt(10, official.getSalaryCount());
-            preparedStatement.execute();
+            checkStmt.setString(1, official.getWorld());
+            checkStmt.setDouble(2, official.getX());
+            checkStmt.setDouble(3, official.getY());
+            checkStmt.setDouble(4, official.getZ());
+            ResultSet rs = checkStmt.executeQuery();
+            
+            boolean exists = false;
+            if (rs.next()) {
+                exists = rs.getInt("count") > 0;
+            }
+            rs.close();
+            
+            if (exists) {
+                // Update bestehenden Official
+                PreparedStatement updateStmt = connection.prepareStatement(
+                        "UPDATE `land_officials` SET `last_salary_time` = ?, `salary_count` = ? WHERE `world` = ? AND `x` = ? AND `y` = ? AND `z` = ?"
+                );
+                updateStmt.setLong(1, official.getLastSalaryTime());
+                updateStmt.setInt(2, official.getSalaryCount());
+                updateStmt.setString(3, official.getWorld());
+                updateStmt.setDouble(4, official.getX());
+                updateStmt.setDouble(5, official.getY());
+                updateStmt.setDouble(6, official.getZ());
+                updateStmt.execute();
+            } else {
+                // Insert neuen Official
+                PreparedStatement insertStmt = connection.prepareStatement(
+                        "INSERT INTO `land_officials` (`id`, `land_name`, `x`, `y`, `z`, `world`, `type`, `last_salary_time`, `salary_count`) " +
+                                "VALUES (?,?,?,?,?,?,?,?,?)"
+                );
+                insertStmt.setString(1, java.util.UUID.randomUUID().toString());
+                insertStmt.setString(2, official.getLandName());
+                insertStmt.setDouble(3, official.getX());
+                insertStmt.setDouble(4, official.getY());
+                insertStmt.setDouble(5, official.getZ());
+                insertStmt.setString(6, official.getWorld());
+                insertStmt.setString(7, official.getType());
+                insertStmt.setLong(8, official.getLastSalaryTime());
+                insertStmt.setInt(9, official.getSalaryCount());
+                insertStmt.execute();
+            }
         } catch (SQLException e) {
             System.out.println("[HeroCraft] Fehler beim Speichern des Beamten: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -294,6 +334,63 @@ public class OfficialManager implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK && event.getAction() != Action.RIGHT_CLICK_AIR) {
             return;
         }
+        
+        Player player = event.getPlayer();
+        
+        // Prüfe ob dieser Spieler gerade einen Official umsetzen will
+        if (player.isSneaking() && relocatingOfficials.containsKey(player.getUniqueId().toString())) {
+            Official official = relocatingOfficials.get(player.getUniqueId().toString());
+            
+            // Prüfe ob der Spieler noch im gleichen Land ist
+            Land currentLand = HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player);
+            if (currentLand == null || !currentLand.getName().equals(official.getLandName())) {
+                player.sendMessage(Constant.PREFIX + "§cDu musst im selben Land bleiben um den Beamten umzustellen!");
+                relocatingOfficials.remove(player.getUniqueId().toString());
+                return;
+            }
+            
+            // Speichere alte Location BEVOR sie geändert wird
+            double oldX = official.getX();
+            double oldY = official.getY();
+            double oldZ = official.getZ();
+            String oldWorld = official.getWorld();
+            String oldLocationKey = official.getLocationKey();
+            
+            // Setze den Official an die neue Location
+            Location newLocation = player.getLocation();
+            official.setLocation(newLocation.getX(), newLocation.getY(), newLocation.getZ(), newLocation.getWorld().getName());
+            
+            // Entferne alten Eintrag aus Datenbank
+            try {
+                PreparedStatement deleteStmt = connection.prepareStatement(
+                        "DELETE FROM `land_officials` WHERE `world` = ? AND `x` = ? AND `y` = ? AND `z` = ?"
+                );
+                deleteStmt.setString(1, oldWorld);
+                deleteStmt.setDouble(2, oldX);
+                deleteStmt.setDouble(3, oldY);
+                deleteStmt.setDouble(4, oldZ);
+                deleteStmt.execute();
+            } catch (SQLException e) {
+                System.out.println("[HeroCraft] Fehler beim Löschen des alten Beamten-Eintrags: " + e.getMessage());
+            }
+            
+            // Aktualisiere HashMap und Datenbank
+            officials.remove(oldLocationKey);
+            officials.put(official.getLocationKey(), official);
+            saveOfficialToDatabase(official);
+            
+            // Spawne den Villager an der neuen Location
+            spawnOfficialVillager(official);
+            
+            player.sendMessage(Constant.PREFIX + "§7Der " + official.getVillagerName() + " §7wurde erfolgreich umgestellt!");
+            player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 0.7f, 1.2f);
+            
+            // Entferne aus relocatingOfficials
+            relocatingOfficials.remove(player.getUniqueId().toString());
+            event.setCancelled(true);
+            return;
+        }
+        
         if (event.getItem() == null || !event.getItem().hasItemMeta() || !event.getItem().getItemMeta().hasDisplayName()) {
             return;
         }
@@ -310,7 +407,7 @@ public class OfficialManager implements Listener {
             return;
         }
 
-        Player player = event.getPlayer();
+        player = event.getPlayer();
         Land land = HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player);
         if (land == null) {
             player.sendMessage(Constant.PREFIX + "§7Du bist in keinem Land.");
@@ -375,14 +472,27 @@ public class OfficialManager implements Listener {
         Official official = getOfficialByLocation(event.getRightClicked().getLocation());
         if (official == null) return;
 
-        updateVillagerName(official);
-
         Land land = HeroCraft.getPlugin().getLandManager().getLandByName(official.getLandName());
         if (land == null || !land.canBuild(player)) {
             player.sendMessage("§e§lBeamter §7§l| §7Du gehörst nicht zu meinem Land!");
             return;
         }
+        
+        // Prüfe ob Admin mit Sneaken umsetzen möchte
+        if (land.isOwnerUUID(player.getUniqueId().toString()) && player.isSneaking()) {
+            // Markiere, dass dieser Spieler einen Official umsetzen will
+            relocatingOfficials.put(player.getUniqueId().toString(), official);
+            
+            // Entferne den Villager vom aktuellen Ort
+            event.getRightClicked().remove();
+            officials.remove(official.getLocationKey());
+            
+            player.sendMessage(Constant.PREFIX + "§7Sneake dort, wo du den " + official.getVillagerName() + " §7umstellen willst!");
+            return;
+        }
 
+        // Normale Rechtsklick-Interaktion (Gehalt zahlen)
+        updateVillagerName(official);
         handleSalaryPayment(player, official, land);
     }
 
@@ -481,7 +591,7 @@ public class OfficialManager implements Listener {
     }
 
     /**
-     * Prüft ob im Umkreis von 80 Blöcken alle benötigten Offiziere vorhanden sind
+     * Prüft ob im Umkreis von 150 Blöcken alle benötigten Offiziere vorhanden sind
      */
     public boolean hasRequiredOfficialsInRadius(Location location, String landName) {
         boolean hasFirefighter = false;
@@ -530,7 +640,7 @@ public class OfficialManager implements Listener {
             if (!entityExists) continue;
 
             double distance = location.distance(officialLocation);
-            if (distance <= 80.0) {
+            if (distance <= 150.0) {
                 switch (official.getType()) {
                     case "FIREFIGHTER":
                         hasFirefighter = true;
@@ -600,7 +710,7 @@ public class OfficialManager implements Listener {
             if (!entityExists) continue;
 
             double distance = location.distance(officialLocation);
-            if (distance <= 80.0) {
+            if (distance <= 150.0) {
                 switch (official.getType()) {
                     case "FIREFIGHTER":
                         hasFirefighter = true;

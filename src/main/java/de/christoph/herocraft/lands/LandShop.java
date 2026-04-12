@@ -1,6 +1,7 @@
 package de.christoph.herocraft.lands;
 
 import de.christoph.herocraft.HeroCraft;
+import de.christoph.herocraft.lands.quests.LandQuestManager;
 import de.christoph.herocraft.utils.Constant;
 import de.christoph.herocraft.utils.ItemBuilder;
 import dev.lone.itemsadder.api.CustomStack;
@@ -47,7 +48,7 @@ public class LandShop implements CommandExecutor, Listener {
         inventory.addItem(getCityBlock());
         inventory.addItem(getTroopSpawner());
         inventory.addItem(getSurvivalLandsChestItem());
-        inventory.addItem(new ItemBuilder(Material.PAPER).setDisplayName("§4§lQuestgeber").setLore("", "§7Preis: §e" + Constant.QUEST_GIVER_PRICE).build());
+        inventory.addItem(new ItemBuilder(Material.PAPER).setDisplayName(LandQuestManager.LAND_QUEST_ITEM_NAME).setLore("", "§7Preis: §e" + Constant.QUEST_GIVER_PRICE).build());
         inventory.addItem(new ItemBuilder(Material.EMERALD).setDisplayName("§4§lBewohner").setLore("", "§7Preis: §e" + Constant.RESIDENT_PRICE).build());
         inventory.addItem(new ItemBuilder(Material.FIRE_CHARGE).setDisplayName("§c§lFeuerwehrmann").setLore("", "§7Preis: §e" + Constant.FIREFIGHTER_PRICE).build());
         inventory.addItem(new ItemBuilder(Material.SHIELD).setDisplayName("§b§lPolizist").setLore("", "§7Preis: §e" + Constant.POLICE_PRICE).build());
@@ -141,15 +142,17 @@ public class LandShop implements CommandExecutor, Listener {
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
                 player.sendMessage(Constant.PREFIX + "§7Dazu hast du nicht genug §cCoins§7.");
             }
-        } else if(diplayName.equalsIgnoreCase("§4§lQuestgeber")) {
+        } else if(diplayName.equalsIgnoreCase(LandQuestManager.LAND_QUEST_ITEM_NAME)) {
             if(HeroCraft.getPlugin().coin.getCoins(player) < Constant.QUEST_GIVER_PRICE) {
                 player.closeInventory();
                 player.sendMessage(Constant.PREFIX + "§7Dazu hast du nicht genut §cCoins§7.");
                 return;
             }
-            player.getInventory().addItem(new ItemBuilder(Material.PAPER).setDisplayName("§4§lQuestgeber").setLore("", "§7Rechtsklick zum platzieren").build());
-            player.sendMessage(Constant.PREFIX + "§7Questgeber §agekauft§7.");
+            player.getInventory().addItem(LandQuestManager.getLandQuestItem());
+            player.sendMessage(Constant.PREFIX + "§7Land Quest Geber §agekauft§7.");
+            player.sendMessage(Constant.PREFIX + "§7Rechtsklick auf einen Block in deinem Land, um ihn zu platzieren.");
             HeroCraft.getPlugin().coin.removeMoney(player, Constant.QUEST_GIVER_PRICE);
+            player.closeInventory();
         } else if(diplayName.equalsIgnoreCase("§4§lBewohner")) {
             if(HeroCraft.getPlugin().coin.getCoins(player) < Constant.RESIDENT_PRICE) {
                 player.closeInventory();

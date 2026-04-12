@@ -15,12 +15,17 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.Material;
+import java.util.Map;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -33,6 +38,7 @@ public class ResidentManager implements Listener {
 
     private Connection connection;
     private HashMap<String, Resident> residents; // LocationKey (world:x:y:z) -> Resident
+    private HashMap<String, Resident> relocatingResidents; // UUID -> Resident (für zwei-Phasen Umsetzen)
 
     // Score-Reduktion pro Update (alle 15 Minuten)
     // Ziel: Ein "Sehr zufrieden" Bewohner (Score 801+) soll in 7 Tagen auf "Sehr unglücklich" (Score <= 200) fallen
@@ -53,6 +59,7 @@ public class ResidentManager implements Listener {
     public ResidentManager() {
         this.connection = HeroCraft.getPlugin().getMySQL().getConnection();
         this.residents = new HashMap<>();
+        this.relocatingResidents = new HashMap<>();
         createTable();
         addMissingColumns();
         loadResidents();
@@ -273,12 +280,16 @@ public class ResidentManager implements Listener {
             return;
         }
         
-        // Prüfe ob bereits ein Villager an dieser Location existiert (anhand des Namens)
+        // Prüfe ob bereits ein Villager an dieser Location existiert (anhand der Location, nicht des Namens)
         for (org.bukkit.entity.Entity entity : chunk.getEntities()) {
             if (entity instanceof Villager) {
                 Villager villager = (Villager) entity;
-                if (villager.getCustomName() != null && villager.getCustomName().startsWith("§e§l" + resident.getLandName())) {
-                    // Villager existiert bereits - nur Name updaten
+                Location entityLoc = villager.getLocation();
+                // Prüfe nur anhand der Location (nicht des Namens)
+                if (Math.abs(entityLoc.getX() - resident.getX()) < 0.5 &&
+                    Math.abs(entityLoc.getY() - resident.getY()) < 0.5 &&
+                    Math.abs(entityLoc.getZ() - resident.getZ()) < 0.5) {
+                    // Villager existiert bereits an dieser Location - nur Name updaten
                     villager.setCustomName(resident.getVillagerName());
                     villager.setCustomNameVisible(true);
                     villager.setPersistent(true);
@@ -371,6 +382,26 @@ public class ResidentManager implements Listener {
         }
     }
 
+    private void updateResidentInDatabase(Resident resident, double oldX, double oldY, double oldZ, String oldWorld) {
+        try {
+            // Lösche alten Eintrag
+            PreparedStatement deleteStmt = connection.prepareStatement(
+                    "DELETE FROM `land_residents` WHERE `land_name` = ? AND `x` = ? AND `y` = ? AND `z` = ? AND `world` = ?"
+            );
+            deleteStmt.setString(1, resident.getLandName());
+            deleteStmt.setDouble(2, oldX);
+            deleteStmt.setDouble(3, oldY);
+            deleteStmt.setDouble(4, oldZ);
+            deleteStmt.setString(5, oldWorld);
+            deleteStmt.execute();
+            
+            // Füge neuen Eintrag mit neuer Location ein
+            saveResidentToDatabase(resident);
+        } catch (SQLException e) {
+            System.out.println("[HeroCraft] Fehler beim Aktualisieren des Bewohners: " + e.getMessage());
+        }
+    }
+
     public void updateResident(Resident resident) {
         residents.put(resident.getLocationKey(), resident);
         saveResidentToDatabase(resident);
@@ -434,6 +465,47 @@ public class ResidentManager implements Listener {
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+
+        // Prüfe ob der Spieler einen Bewohner zum Umsetzen markiert hat
+        if (player.isSneaking() && relocatingResidents.containsKey(player.getUniqueId().toString())) {
+            if (event.getClickedBlock() != null) {
+                Resident resident = relocatingResidents.get(player.getUniqueId().toString());
+                
+                // Prüfe ob der Spieler noch im selben Land ist
+                Land currentLand = LandManager.getLandAtLocation(event.getClickedBlock().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+                if (currentLand == null || !currentLand.getName().equals(resident.getLandName())) {
+                    player.sendMessage(Constant.PREFIX + "§cDu musst im selben Land bleiben um den Bewohner umzusetzen!");
+                    relocatingResidents.remove(player.getUniqueId().toString());
+                    return;
+                }
+                
+                // Speichere alte Location BEVOR sie geändert wird
+                double oldX = resident.getX();
+                double oldY = resident.getY();
+                double oldZ = resident.getZ();
+                String oldWorld = resident.getWorld();
+                String oldLocationKey = resident.getLocationKey();
+                
+                // Setze neue Location
+                Location newLocation = event.getClickedBlock().getLocation().add(0.5, 1, 0.5);
+                resident.setLocation(newLocation.getX(), newLocation.getY(), newLocation.getZ(), newLocation.getWorld().getName());
+                
+                // Aktualisiere HashMap und Datenbank
+                residents.remove(oldLocationKey);
+                residents.put(resident.getLocationKey(), resident);
+                updateResidentInDatabase(resident, oldX, oldY, oldZ, oldWorld);
+                
+                // Spawne Bewohner an neuer Location
+                spawnResidentVillager(resident);
+                
+                relocatingResidents.remove(player.getUniqueId().toString());
+                player.sendMessage(Constant.PREFIX + "§7Bewohner erfolgreich umgesetzt.");
+                event.setCancelled(true);
+                return;
+            }
+        }
+
         if (event.getItem() == null || !event.getItem().hasItemMeta() || !event.getItem().getItemMeta().hasDisplayName()) {
             return;
         }
@@ -443,7 +515,6 @@ public class ResidentManager implements Listener {
             return;
         }
 
-        Player player = event.getPlayer();
         Land land = LandManager.getLandAtLocation(player.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
         if (land == null || !land.canBuild(player)) {
             player.sendMessage(Constant.PREFIX + "§7Bitte platziere den Bewohner in deinem Land.");
@@ -476,10 +547,10 @@ public class ResidentManager implements Listener {
                     if (resident != null) {
                         Land land = HeroCraft.getPlugin().getLandManager().getLandByName(resident.getLandName());
                         if (land != null && land.isOwnerUUID(player.getUniqueId().toString())) {
-                            // Admin kann Bewohner entfernen
-                            removeResident(resident);
+                            // Markiere Bewohner zum Umsetzen statt ihn zu entfernen
+                            relocatingResidents.put(player.getUniqueId().toString(), resident);
                             event.getEntity().remove();
-                            player.sendMessage(Constant.PREFIX + "§7Bewohner entfernt.");
+                            player.sendMessage(Constant.PREFIX + "§7Bewohner entfernt. Sneake + Rechtsklick auf einen Block im Land, um ihn umzusetzen.");
                             return;
                         }
                     }
@@ -488,6 +559,18 @@ public class ResidentManager implements Listener {
         }
 
         event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onEntityTransform(EntityTransformEvent event) {
+        // Verhindere, dass Bewohner-Villager zu Hexen verwandelt werden (durch Blitzschlag)
+        if (event.getTransformReason() == EntityTransformEvent.TransformReason.LIGHTNING) {
+            if (event.getEntity() instanceof Villager) {
+                if (isResident(event.getEntity())) {
+                    event.setCancelled(true);
+                }
+            }
+        }
     }
 
     @EventHandler
@@ -504,6 +587,13 @@ public class ResidentManager implements Listener {
         updateVillagerName(resident);
 
         Land land = HeroCraft.getPlugin().getLandManager().getLandByName(resident.getLandName());
+        // Admin-Shortcut: Sneaken + Rechtsklick entfernt Bewohner und gibt Item zum Platzieren
+        if (player.isSneaking() && land != null && land.isOwnerUUID(player.getUniqueId().toString())) {
+            removeResident(resident);
+            giveResidentItem(player);
+            player.sendMessage(Constant.PREFIX + "§7Bewohner entfernt und ins Inventar gelegt.");
+            return;
+        }
         if (land == null || !land.canBuild(player)) {
             player.sendMessage("§e§lBewohner §7§l| §7Du gehörst nicht zu meinem Land!");
             return;
@@ -518,7 +608,7 @@ public class ResidentManager implements Listener {
         
         if (!HeroCraft.getPlugin().getOfficialManager().hasRequiredOfficialsInRadius(residentLocation, resident.getLandName())) {
             String missing = HeroCraft.getPlugin().getOfficialManager().getMissingOfficialsMessage(residentLocation, resident.getLandName());
-            player.sendMessage("§e§lBewohner §7§l| §cIm Umkreis von 80 Blöcken fehlen: §e" + missing);
+            player.sendMessage("§e§lBewohner §7§l| §cIm Umkreis von 150 Blöcken fehlen: §e" + missing);
             player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 0.5f, 1.0f);
             return;
         }
@@ -661,13 +751,13 @@ public class ResidentManager implements Listener {
     private void handleAccidentStatus(Player player, Resident resident, Land land) {
         int requiredApples = resident.getAccidentGoldenAppleCount();
         
-        // Prüfe ob Spieler genug OP Goldäpfel hat
-        int playerApples = countEnchantedGoldenApples(player);
+        // Prüfe ob Spieler genug Goldäpfel hat
+        int playerApples = countGoldenApples(player);
         
         if (playerApples < requiredApples) {
             double cost = resident.getAccidentCost();
             player.sendMessage("§e§lBewohner §7§l| §cIch hatte einen Unfall und brauche Hilfe!");
-            player.sendMessage("§e§lBewohner §7§l| §7Bitte bringe mir §e" + requiredApples + "x OP Goldäpfel §7und zahle §e" + String.format("%.0f", cost) + " Coins §7für Arztkosten.");
+            player.sendMessage("§e§lBewohner §7§l| §7Bitte bringe mir §e" + requiredApples + "x Goldäpfel §7und zahle §e" + String.format("%.0f", cost) + " Coins §7für Arztkosten.");
             player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_HURT, 0.7f, 1.0f);
             return;
         }
@@ -682,14 +772,14 @@ public class ResidentManager implements Listener {
             return;
         }
         
-        // Entferne OP Goldäpfel
-        removeEnchantedGoldenApples(player, requiredApples);
+        // Entferne Goldäpfel
+        removeGoldenApples(player, requiredApples);
         
         // Entferne Coins
         HeroCraft.getPlugin().coin.removeMoney(player, cost);
         
         player.sendMessage("§e§lBewohner §7§l| §aVielen Dank für deine Hilfe! Ich fühle mich schon besser.");
-        player.sendMessage("§e§lBewohner §7§l| §7(-" + requiredApples + "x OP Goldäpfel, -" + String.format("%.0f", cost) + " Coins)");
+        player.sendMessage("§e§lBewohner §7§l| §7(-" + requiredApples + "x Goldäpfel, -" + String.format("%.0f", cost) + " Coins)");
         player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 0.7f, 1.2f);
         
         // Status direkt zu NEED ändern (Unfall ist einmalig)
@@ -738,12 +828,12 @@ public class ResidentManager implements Listener {
     }
     
     /**
-     * Zählt OP Goldäpfel im Inventar des Spielers
+     * Zählt Goldäpfel im Inventar des Spielers
      */
-    private int countEnchantedGoldenApples(Player player) {
+    private int countGoldenApples(Player player) {
         int count = 0;
         for (org.bukkit.inventory.ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == org.bukkit.Material.ENCHANTED_GOLDEN_APPLE) {
+            if (item != null && item.getType() == org.bukkit.Material.GOLDEN_APPLE) {
                 count += item.getAmount();
             }
         }
@@ -751,12 +841,12 @@ public class ResidentManager implements Listener {
     }
     
     /**
-     * Entfernt OP Goldäpfel aus dem Inventar
+     * Entfernt Goldäpfel aus dem Inventar
      */
-    private void removeEnchantedGoldenApples(Player player, int amount) {
+    private void removeGoldenApples(Player player, int amount) {
         int remaining = amount;
         for (org.bukkit.inventory.ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == org.bukkit.Material.ENCHANTED_GOLDEN_APPLE) {
+            if (item != null && item.getType() == org.bukkit.Material.GOLDEN_APPLE) {
                 int toRemove = Math.min(remaining, item.getAmount());
                 if (item.getAmount() == toRemove) {
                     player.getInventory().remove(item);
@@ -1098,6 +1188,26 @@ public class ResidentManager implements Listener {
             preparedStatement.execute();
         } catch (SQLException e) {
             System.out.println("[HeroCraft] Fehler beim Entfernen des Bewohners: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Gibt dem Spieler ein Item, das einen Bewohner repräsentiert (zum Neupositionieren).
+     */
+    private void giveResidentItem(Player player) {
+        ItemStack item = new ItemStack(Material.EMERALD);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§4§lBewohner");
+            meta.setLore(java.util.Arrays.asList("", "§7Rechtsklick zum platzieren"));
+            item.setItemMeta(meta);
+        }
+
+        Map<Integer, ItemStack> leftover = player.getInventory().addItem(item);
+        if (leftover != null && !leftover.isEmpty()) {
+            for (ItemStack drop : leftover.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
         }
     }
 

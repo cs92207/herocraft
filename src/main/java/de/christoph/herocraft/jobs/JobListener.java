@@ -16,7 +16,11 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 public class JobListener implements Listener {
@@ -182,6 +186,7 @@ public class JobListener implements Listener {
             // Level-Up Nachricht in Actionbar
             if (job.getLevel() > oldLevel) {
                 player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText("§a§lLevel Up! §7Du bist jetzt Level §a" + job.getLevel() + "§7! §7(§6" + String.format("%.1fx", job.getCoinsMultiplier()) + "§7)"));
+                giveRandomNormalChest(player, 0.5D);
             }
         }
     }
@@ -241,7 +246,62 @@ public class JobListener implements Listener {
         // Level-Up Nachricht in Actionbar
         if (job.getLevel() > oldLevel) {
             player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText("§a§lLevel Up! §7Du bist jetzt Level §a" + job.getLevel() + "§7! §7(§6" + String.format("%.1fx", job.getCoinsMultiplier()) + "§7)"));
+            giveRandomNormalChest(player, 0.5D);
         }
+    }
+
+    private void giveRandomNormalChest(Player player, double chance) {
+        if (new Random().nextDouble() >= chance) {
+            return;
+        }
+
+        int currentChests = getNormalChestAmount(player);
+        setNormalChestAmount(player, currentChests + 1);
+        player.sendMessage(Constant.PREFIX + "§7Du hast eine §aSurvivalLands Kiste §7erhalten.");
+    }
+
+    private int getNormalChestAmount(Player player) {
+        try {
+            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT `amount` FROM `survivalland_cases` WHERE `uuid` = ?");
+            preparedStatement.setString(1, player.getUniqueId().toString());
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getInt("amount");
+            }
+        } catch (SQLException e) {
+            System.out.println("[HeroCraft Jobs] Fehler beim Laden der normalen Kisten: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    private void setNormalChestAmount(Player player, int amount) {
+        try {
+            PreparedStatement preparedStatement;
+            if (hasNormalChestEntry(player)) {
+                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("UPDATE `survivalland_cases` SET `amount` = ? WHERE `uuid` = ?");
+                preparedStatement.setInt(1, amount);
+                preparedStatement.setString(2, player.getUniqueId().toString());
+            } else {
+                preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("INSERT INTO `survivalland_cases` (`uuid`,`amount`) VALUES (?,?)");
+                preparedStatement.setString(1, player.getUniqueId().toString());
+                preparedStatement.setInt(2, amount);
+            }
+            preparedStatement.execute();
+        } catch (SQLException e) {
+            System.out.println("[HeroCraft Jobs] Fehler beim Speichern der normalen Kisten: " + e.getMessage());
+        }
+    }
+
+    private boolean hasNormalChestEntry(Player player) {
+        try {
+            PreparedStatement preparedStatement = HeroCraft.getPlugin().getShopMySQL().getConnection().prepareStatement("SELECT `amount` FROM `survivalland_cases` WHERE `uuid` = ?");
+            preparedStatement.setString(1, player.getUniqueId().toString());
+            ResultSet resultSet = preparedStatement.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            System.out.println("[HeroCraft Jobs] Fehler beim Prüfen der normalen Kisten: " + e.getMessage());
+        }
+        return false;
     }
 
     private boolean canKillEntity(Player player, org.bukkit.Location location) {

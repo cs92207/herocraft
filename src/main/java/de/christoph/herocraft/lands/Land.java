@@ -260,16 +260,26 @@
         /*     */   }
     /*     */
     /*     */   public void addMember(Player player) {
-        /* 263 */     List<String> membUUIDs = new ArrayList<>(Arrays.asList(this.memberUUIDs));
-        /* 264 */     List<String> membNames = new ArrayList<>(Arrays.asList(this.memberNames));
-        /* 265 */     if (membUUIDs.contains(player.getUniqueId().toString()))
-            /*     */       return;
-        /* 267 */     membUUIDs.add(player.getUniqueId().toString());
-        /* 268 */     membNames.add(player.getName());
-        /* 269 */     this.memberUUIDs = membUUIDs.<String>toArray(new String[0]);
-        /* 270 */     this.memberNames = membNames.<String>toArray(new String[0]);
-        /* 271 */     HeroCraft.getPlugin().getLandManager().saveLand(this);
-        /*     */   }
+        /* 263 */
+        List<String> membUUIDs = new ArrayList<>(Arrays.asList(this.memberUUIDs));
+        /* 264 */
+        List<String> membNames = new ArrayList<>(Arrays.asList(this.memberNames));
+        /* 265 */
+        if (membUUIDs.contains(player.getUniqueId().toString()))
+            /*     */ return;
+        /* 267 */
+        membUUIDs.add(player.getUniqueId().toString());
+        /* 268 */
+        membNames.add(player.getName());
+        /* 269 */
+        this.memberUUIDs = membUUIDs.<String>toArray(new String[0]);
+        /* 270 */
+        this.memberNames = membNames.<String>toArray(new String[0]);
+        /* 271 */
+        HeroCraft.getPlugin().getLandManager().saveLand(this);
+        /* 272 */
+        HeroCraft.getPlugin().getStatisticsManager().markLandJoined(player.getUniqueId());
+    }
     /*     */
     /*     */   public void promotePlayer(String name) {
         /* 275 */     List<String> membNames = new ArrayList<>(Arrays.asList(this.memberNames));

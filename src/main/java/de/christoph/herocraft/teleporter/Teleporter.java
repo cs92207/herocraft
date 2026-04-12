@@ -38,7 +38,7 @@ public class Teleporter implements CommandExecutor, Listener {
         inventory.setItem(10, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lLand Management").build());
         inventory.setItem(12, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lTrainingsarena").build());
         inventory.setItem(14, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lVersicherungen").build());
-        inventory.setItem(16, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lSchmiede").build());
+        inventory.setItem(16, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lRezepte").build());
         inventory.setItem(29, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lMarkt").build());
         inventory.setItem(31, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lDimensionen").build());
         inventory.setItem(33, new ItemBuilder(Material.STONE_AXE).setCustomModelData(1000).setDisplayName("§4§lMöbelhaus").build());
@@ -75,6 +75,7 @@ public class Teleporter implements CommandExecutor, Listener {
         String displayName = player.getInventory().getItemInMainHand().getItemMeta().getDisplayName();
         if(!displayName.equalsIgnoreCase("§4§lTeleporter"))
             return;
+        event.setCancelled(true);
         if(HeroCraft.getPlugin().prisonManager.prisonPlayers.containsKey(player)) {
             player.sendMessage(Constant.PREFIX + "§7Das darfst du nicht im Gefängnis. Baue Obsidian ab, oder verlasse dein Land §0(§e/land§0)§7.");
             return;
@@ -97,6 +98,7 @@ public class Teleporter implements CommandExecutor, Listener {
         Player player = (Player) event.getWhoClicked();
         if(!event.getView().getTitle().equalsIgnoreCase(":offset_-16::teleporter:"))
             return;
+        event.setCancelled(true);
         if(event.getCurrentItem() == null)
             return;
         if(!event.getCurrentItem().hasItemMeta())
@@ -110,25 +112,32 @@ public class Teleporter implements CommandExecutor, Listener {
         String displayName = event.getCurrentItem().getItemMeta().getDisplayName();
         if(displayName.equalsIgnoreCase("§4§lLand Management")) {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-            player.teleport(new Location(Bukkit.getWorld("world"), 139.5, 77.5, -166.5D, 0.1F, 0.9F));
+            player.teleport(new Location(Bukkit.getWorld("world"), 137.5, 82.5, -146.5D, 180F, 3.5F));
+            HeroCraft.getPlugin().getStatisticsManager().markTeleporterUsed(player.getUniqueId());
         } else if(displayName.equalsIgnoreCase("§4§lTrainingsarena")) {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
             player.teleport(new Location(Bukkit.getWorld("world"), 71.5, 77.5, -144.5, 90F, 1.2F));
+            HeroCraft.getPlugin().getStatisticsManager().markTeleporterUsed(player.getUniqueId());
         } else if(displayName.equalsIgnoreCase("§4§lVersicherungen")) {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-            player.teleport(new Location(Bukkit.getWorld("world"), 102, 87.5D, -233.5, -179.9F, -3.5F));
+            player.teleport(new Location(Bukkit.getWorld("world"), 96.5, 87.5, -217.5D, 180F, 3.5F));
+            HeroCraft.getPlugin().getStatisticsManager().markTeleporterUsed(player.getUniqueId());
         } else if(displayName.equalsIgnoreCase("§4§lRezepte")) {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-            player.teleport(new Location(Bukkit.getWorld("world"), 174, 78.5, -157.5, 0.4F, 0.7F));
+            player.teleport(new Location(Bukkit.getWorld("world"), 175, 62.5, -165.5, 179F, 6.7F));
+            HeroCraft.getPlugin().getStatisticsManager().markTeleporterUsed(player.getUniqueId());
         } else if(displayName.equalsIgnoreCase("§4§lMarkt")) {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-            player.teleport(new Location(Bukkit.getWorld("world"), 202, 69.5, -226, -91.1F, -0.9F));
+            player.teleport(new Location(Bukkit.getWorld("world"), 191, 69.5, -226, -91.1F, -0.9F));
+            HeroCraft.getPlugin().getStatisticsManager().markTeleporterUsed(player.getUniqueId());
         } else if(displayName.equalsIgnoreCase("§4§lDimensionen")) {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-            player.teleport(new Location(Bukkit.getWorld("world"), 174, 78.5, -157.5, 0.4F, 0.7F));
+            player.teleport(new Location(Bukkit.getWorld("world"), 175, 78.5, -173.8, 0.4F, 0.7F));
+            HeroCraft.getPlugin().getStatisticsManager().markTeleporterUsed(player.getUniqueId());
         } else if(displayName.equalsIgnoreCase("§4§lMöbelhaus")) {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-            player.teleport(new Location(Bukkit.getWorld("world"), 161.5, 80.5, -260.5, 180, -0.2F));
+            player.teleport(new Location(Bukkit.getWorld("world"), 161.5, 80.5, -258.5, 180, -0.2F));
+            HeroCraft.getPlugin().getStatisticsManager().markTeleporterUsed(player.getUniqueId());
         }
     }
 
