@@ -3,6 +3,8 @@ package de.christoph.herocraft.lands.quests;
 import de.christoph.herocraft.HeroCraft;
 import de.christoph.herocraft.lands.Land;
 import de.christoph.herocraft.lands.LandManager;
+import de.christoph.herocraft.lands.province.Province;
+import de.christoph.herocraft.lands.province.ProvinceManager;
 import de.christoph.herocraft.quests.BreakBlockQuest;
 import de.christoph.herocraft.quests.CatchFishQuest;
 import de.christoph.herocraft.quests.CraftItemQuest;
@@ -565,6 +567,25 @@ public class LandQuestManager implements Listener {
         return first.isPassable() && second.isPassable();
     }
 
+    private Land getOwnedLandForQuestPlacement(Player player, Block clickedBlock) {
+        Land ownLand = HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player);
+        if (ownLand == null || !ownLand.isOwnerUUID(player.getUniqueId().toString())) {
+            return null;
+        }
+
+        Land directLand = LandManager.getLandAtLocation(clickedBlock.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+        if (directLand != null && directLand.getName().equalsIgnoreCase(ownLand.getName())) {
+            return directLand;
+        }
+
+        Province province = ProvinceManager.getProvinceAtLocation(clickedBlock.getLocation(), HeroCraft.getPlugin().getProvinceManager().getProvinces());
+        if (province != null && province.getLand().equalsIgnoreCase(ownLand.getName())) {
+            return ownLand;
+        }
+
+        return null;
+    }
+
     private void sendQuestInfo(Player player, LandQuestGiver questGiver, boolean admin) {
         Quest quest = questGiver.getCurrentQuest();
         if (quest == null) {
@@ -603,10 +624,9 @@ public class LandQuestManager implements Listener {
             return;
         }
 
-        Land ownLand = HeroCraft.getPlugin().getLandManager().getLandFromPlayer(player);
-        Land land = LandManager.getLandAtLocation(clickedBlock.getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
-        if (land == null || ownLand == null || !land.getName().equalsIgnoreCase(ownLand.getName()) || !land.isOwnerUUID(player.getUniqueId().toString())) {
-            player.sendMessage(PREFIX + "§7Platziere den Land Quest Geber nur in deinem eigenen Land.");
+        Land land = getOwnedLandForQuestPlacement(player, clickedBlock);
+        if (land == null) {
+            player.sendMessage(PREFIX + "§7Platziere den Land Quest Geber nur in deinem eigenen Land oder einer deiner Städte.");
             return;
         }
         if (!hasSpaceForVillager(clickedBlock)) {

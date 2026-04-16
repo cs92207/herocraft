@@ -14,10 +14,7 @@ import dev.lone.itemsadder.api.Events.FurnitureBreakEvent;
 import dev.lone.itemsadder.api.ItemsAdder;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.ItemFrame;
-import org.bukkit.entity.Pig;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
@@ -397,6 +394,47 @@ public class ProtectionListener implements Listener {
                 event.setCancelled(true);
         }
 
+    }
+
+    @EventHandler
+    public void onHangingBreakByPlayer(HangingBreakByEntityEvent event) {
+        if(event.getEntity().getType() != EntityType.ITEM_FRAME
+                && event.getEntity().getType() != EntityType.GLOW_ITEM_FRAME
+                && event.getEntity().getType() != EntityType.PAINTING) {
+            return;
+        }
+
+        if(event.getRemover() instanceof Player) {
+            Player player = (Player) event.getRemover();
+            Land land = LandManager.getLandAtLocation(event.getEntity().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+            if(land == null) {
+                return;
+            }
+            if(!land.canBuild(player)) {
+                if(player.getGameMode() == GameMode.SURVIVAL) {
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+            return;
+        }
+
+        if(event.getRemover() instanceof Projectile) {
+            Projectile projectile = (Projectile) event.getRemover();
+            if(projectile.getShooter() instanceof Player) {
+                Player player = (Player) projectile.getShooter();
+                Land land = LandManager.getLandAtLocation(event.getEntity().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+                if(land == null) {
+                    return;
+                }
+                if(!land.canBuild(player)) {
+                    if(player.getGameMode() == GameMode.SURVIVAL) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     @EventHandler
