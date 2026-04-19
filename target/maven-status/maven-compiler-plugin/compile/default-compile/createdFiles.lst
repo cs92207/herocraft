@@ -19,6 +19,7 @@ de\christoph\herocraft\challenges\gui\CreateGui.class
 de\christoph\herocraft\lands\LandManager.class
 de\christoph\herocraft\onboarding\CreateTutorialLandPositionCommand.class
 de\christoph\herocraft\tutorial\MarktNoCommand.class
+de\christoph\herocraft\basiccommands\FreeAnyCoinsCommand.class
 de\christoph\herocraft\market\Product.class
 de\christoph\herocraft\mysql\MySQL.class
 de\christoph\herocraft\school\skills\activeskills\Smash$4.class
@@ -104,7 +105,6 @@ de\christoph\herocraft\lands\Goverment$4.class
 de\christoph\herocraft\raids\Raid$2.class
 de\christoph\herocraft\dimensions\NatureAdventure$1$2.class
 de\christoph\herocraft\insurance\insurances\HealthInsurance.class
-de\christoph\herocraft\specialitems\DuckStick$1.class
 de\christoph\herocraft\tutorial\TutorialListener$1.class
 de\christoph\herocraft\quests\TradeVillagerQuest.class
 de\christoph\herocraft\statistics\StatisticsCommand.class
@@ -121,6 +121,7 @@ de\christoph\herocraft\onboarding\OnBoardingListener.class
 de\christoph\herocraft\market\FurnitureListener.class
 de\christoph\herocraft\markethall\WoodMarketShop.class
 de\christoph\herocraft\specialitems\BowMode.class
+de\christoph\herocraft\basiccommands\BroadcastCommand.class
 de\christoph\herocraft\basiccommands\SignCommand.class
 de\christoph\herocraft\insurance\insurances\XPInsurance.class
 de\christoph\herocraft\onboarding\StartOnBoardingCommand.class

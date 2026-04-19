@@ -80,13 +80,6 @@ public class DuckStick implements Listener {
 
         player.playSound(player.getLocation(), Sound.ENTITY_WITCH_THROW, 1, 1);
 
-        cooldownPlayers.add(player);
-        Bukkit.getScheduler().scheduleSyncDelayedTask(HeroCraft.getPlugin(), new Runnable() {
-            @Override
-            public void run() {
-                cooldownPlayers.remove(player);
-            }
-        }, 20*3);
 
         // Partikel alle 1 Tick anzeigen
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {

@@ -46,6 +46,7 @@ commands:
     aliases:
       - clearchat
       - cc
+  broadcast:
   enderchest:
     aliases:
       - ec
@@ -101,6 +102,7 @@ commands:
   trust:
   untrust:
   endraid:
+  gratisanycoins:
   killalltroops:
   taeglichequest:
   createlandfast:

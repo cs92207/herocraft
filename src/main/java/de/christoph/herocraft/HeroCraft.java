@@ -105,6 +105,7 @@ public final class HeroCraft extends JavaPlugin {
     private LandPresentationManager landPresentationManager;
     private ProvinceManager provinceManager;
     private BoosterManager boosterManager;
+    private BroadcastCommand broadcastCommand;
     private DimensionManager dimensionManager;
 
     public static Commands openGUICommand;
@@ -205,6 +206,9 @@ public final class HeroCraft extends JavaPlugin {
         getCommand("befehle").setExecutor(new CommandsCommand());
         getCommand("spawn").setExecutor(new SpawnCommand());
         getCommand("chatclear").setExecutor(new ChatClearCommand());
+        broadcastCommand = new BroadcastCommand(this);
+        getCommand("broadcast").setExecutor(broadcastCommand);
+        broadcastCommand.start();
         getCommand("enderchest").setExecutor(new EnderchestCommand());
         getCommand("gamemode").setExecutor(new GamemodeCommand());
         getCommand("hut").setExecutor(new HatCommand());
@@ -242,6 +246,7 @@ public final class HeroCraft extends JavaPlugin {
         getCommand("tagja").setExecutor(new VoteDayYesCommand());
         getCommand("tagnein").setExecutor(new VoteDayNoCommand());
         getCommand("booster").setExecutor(boosterManager);
+        getCommand("gratisanycoins").setExecutor(new FreeAnyCoinsCommand());
 
         getCommand("message").setExecutor(new MsgCommand(replyMap));
         getCommand("reply").setExecutor(new ReplyCommand(replyMap));
@@ -374,6 +379,9 @@ public final class HeroCraft extends JavaPlugin {
     public void onDisable() {
         if (landQuestManager != null) {
             landQuestManager.shutdown();
+        }
+        if (broadcastCommand != null) {
+            broadcastCommand.shutdown();
         }
         for(Raid i : raidManager.getRaids()) {
             i.killAllRaidEntities();

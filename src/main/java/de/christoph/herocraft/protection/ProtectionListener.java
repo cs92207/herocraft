@@ -209,11 +209,24 @@ public class ProtectionListener implements Listener {
     public void onPlayerInteractFrameEntity(PlayerInteractEntityEvent event) {
         if (event.getRightClicked() instanceof ItemFrame) {
             Player player = event.getPlayer();
-            Location loc = event.getRightClicked().getLocation();
-            // Prüfe, ob die Location in einer Danger Zone ist
             if (isInSpawn(player.getLocation())) {
                 event.setCancelled(true);
-                player.sendMessage("§cDu darfst hier keine Item Frames bearbeiten!");
+                player.sendMessage(Constant.PREFIX + "§7Du darfst hier keine Item Frames bearbeiten!");
+                return;
+            }
+
+            if (player.getGameMode() == GameMode.CREATIVE) {
+                return;
+            }
+
+            Land land = LandManager.getLandAtLocation(event.getRightClicked().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+            if (land == null) {
+                return;
+            }
+
+            if (!land.canBuild(player)) {
+                event.setCancelled(true);
+                player.sendMessage(Constant.PREFIX + "§7Du darfst hier keine Item Frames bearbeiten!");
             }
         }
     }
@@ -446,6 +459,36 @@ public class ProtectionListener implements Listener {
                     return;
                 }
             }
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onArmorStandBreak(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof ArmorStand)) {
+            return;
+        }
+
+        Player player = null;
+        if (event.getDamager() instanceof Player) {
+            player = (Player) event.getDamager();
+        } else if (event.getDamager() instanceof Projectile) {
+            Projectile projectile = (Projectile) event.getDamager();
+            if (projectile.getShooter() instanceof Player) {
+                player = (Player) projectile.getShooter();
+            }
+        }
+
+        if (player == null || player.getGameMode() == GameMode.CREATIVE) {
+            return;
+        }
+
+        Land land = LandManager.getLandAtLocation(event.getEntity().getLocation(), HeroCraft.getPlugin().getLandManager().getAllLands());
+        if (land == null) {
+            return;
+        }
+
+        if (!land.canBuild(player)) {
             event.setCancelled(true);
         }
     }
